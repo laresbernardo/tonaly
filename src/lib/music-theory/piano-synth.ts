@@ -83,6 +83,66 @@ class PianoSynth {
       this.playNote(note2, 2.5);
     }
   }
+
+  /**
+   * Explicitly unlocks the AudioContext on user interaction to comply with strict mobile policies.
+   */
+  public unlock(): Promise<void> {
+    return new Promise((resolve) => {
+      try {
+        const ctx = this.getAudioContext();
+        if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+          const resumePromise = ctx.resume();
+          if (resumePromise && typeof resumePromise.then === 'function') {
+            resumePromise.then(() => {
+              this.playSilence(ctx);
+              resolve();
+            }).catch((err) => {
+              console.warn('AudioContext resume failed:', err);
+              resolve();
+            });
+          } else {
+            this.playSilence(ctx);
+            resolve();
+          }
+        } else {
+          this.playSilence(ctx);
+          resolve();
+        }
+      } catch (e) {
+        console.warn('AudioContext unlock failed:', e);
+        resolve();
+      }
+    });
+  }
+
+  private playSilence(ctx: AudioContext): void {
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch (e) {
+      console.warn('Silent playback failed:', e);
+    }
+  }
 }
 
 export const pianoSynth = new PianoSynth();
+
+// Auto-unlock AudioContext on first user interaction
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    pianoSynth.unlock();
+    window.removeEventListener('click', unlockAudio);
+    window.removeEventListener('touchstart', unlockAudio);
+    window.removeEventListener('touchend', unlockAudio);
+    window.removeEventListener('keydown', unlockAudio);
+  };
+  window.addEventListener('click', unlockAudio);
+  window.addEventListener('touchstart', unlockAudio);
+  window.addEventListener('touchend', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
+}
+
