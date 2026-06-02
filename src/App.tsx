@@ -55,6 +55,14 @@ function App() {
   const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history'>('training');
   const [inStudio, setInStudio] = useState(false);
 
+  const handleLogoClick = () => {
+    setInStudio(false);
+    // Clear search params and hash from URL to show the main landing page URL cleanly
+    if (window.location.search || window.location.hash) {
+      window.history.pushState({}, '', window.location.pathname);
+    }
+  };
+
   // Zustand Global Ear Training States
   const {
     gameMode,
@@ -163,17 +171,88 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col justify-between selection:bg-cyan-500 selection:text-white relative">
-      {/* Aurora Glowing Background Mesh */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-cyan-950/25 blur-[130px] pointer-events-none" />
-        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-orange-950/10 blur-[130px] pointer-events-none" />
-        <div className="absolute top-[40%] left-[30%] w-[45%] h-[45%] rounded-full bg-blue-950/10 blur-[120px] pointer-events-none" />
+    <div className="min-h-screen text-slate-50 flex flex-col justify-between selection:bg-cyan-500 selection:text-white relative">
+      {/* Aurora Glowing Background Mesh & Instrument String Patterns */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none bg-slate-950">
+        {/* HSL-tailored Atmosphere Glowing Orbs */}
+        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-cyan-950/25 blur-[130px]" />
+        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-orange-950/10 blur-[130px]" />
+        <div className="absolute top-[40%] left-[30%] w-[45%] h-[45%] rounded-full bg-blue-950/10 blur-[120px]" />
+        
+        {/* Subtle dot grid representing technical music studio precision */}
+        <div 
+          className="absolute inset-0 opacity-[0.24]" 
+          style={{
+            backgroundImage: 'radial-gradient(circle, #06b6d4 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
+          }}
+        />
+
+        {/* Premium flowing instrument strings & audio waves SVG */}
+        <svg className="absolute inset-0 w-full h-full opacity-[0.48]" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="string-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0" />
+              <stop offset="50%" stopColor="#06b6d4" stopOpacity="1" />
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="string-grad-2" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0" />
+              <stop offset="50%" stopColor="#ec4899" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="stave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#1e293b" stopOpacity="0" />
+              <stop offset="20%" stopColor="#334155" stopOpacity="0.85" />
+              <stop offset="80%" stopColor="#334155" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="#1e293b" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          
+          {/* Horizontal Staff/Stave lines resembling musical strings */}
+          <g className="translate-y-[10%] sm:translate-y-[15%]">
+            <line x1="0" y1="100" x2="100%" y2="100" stroke="url(#stave-grad)" strokeWidth="1.5" />
+            <line x1="0" y1="120" x2="100%" y2="120" stroke="url(#stave-grad)" strokeWidth="1.5" />
+            <line x1="0" y1="140" x2="100%" y2="140" stroke="url(#stave-grad)" strokeWidth="1.5" />
+            <line x1="0" y1="160" x2="100%" y2="160" stroke="url(#stave-grad)" strokeWidth="1.5" />
+            <line x1="0" y1="180" x2="100%" y2="180" stroke="url(#stave-grad)" strokeWidth="1.5" />
+          </g>
+
+          {/* Vibrating wavy lines resembling guitar or piano strings */}
+          {/* String 1 (Cyan high wave) */}
+          <path 
+            d="M -100,280 C 220,120 420,480 720,230 C 1020,30 1220,380 1620,180 C 1820,100 2020,280 2220,180" 
+            fill="none" 
+            stroke="url(#string-grad-1)" 
+            strokeWidth="2.5"
+            className="animate-pulse"
+            style={{ animationDuration: '9s' }}
+          />
+          {/* String 2 (Purple low wave) */}
+          <path 
+            d="M -50,420 C 280,280 520,620 880,330 C 1220,80 1420,520 1820,280 C 1970,200 2120,380 2320,280" 
+            fill="none" 
+            stroke="url(#string-grad-2)" 
+            strokeWidth="2"
+            className="animate-pulse"
+            style={{ animationDuration: '14s' }}
+          />
+          {/* String 3 (Thin vibrating string frequency) */}
+          <path 
+            d="M 0,135 Q 260,200 520,135 T 1040,135 T 1560,135 T 2080,135" 
+            fill="none" 
+            stroke="url(#string-grad-1)" 
+            strokeWidth="1.25"
+            strokeDasharray="6, 6"
+            className="animate-pulse"
+            style={{ animationDuration: '6s' }}
+          />
+        </svg>
       </div>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div 
-          onClick={() => setInStudio(false)} 
+          onClick={handleLogoClick} 
           className="flex items-center space-x-3 cursor-pointer group select-none"
         >
           <img
