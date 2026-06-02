@@ -1,73 +1,80 @@
-# React + TypeScript + Vite
+# 🎼 Tonaly Progressive Web App (PWA)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, high-performance, offline-ready Progressive Web Application for interactive music theory study and piano key mapping, rewritten and expanded from the original [R Shiny Tonaly App](https://github.com/laresbernardo/tonalyshiny) into React, TypeScript, Tailwind CSS, and Firebase.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠 Tech Stack
 
-## React Compiler
+* **Frontend Framework:** React 19 + Vite + TypeScript
+* **Backend & Database:** Firebase (Authentication, Firestore, Hosting)
+* **Offline PWA Engine:** `vite-plugin-pwa` + Service Worker with runtime Google Fonts caching
+* **Styling System:** Tailwind CSS v4 + Custom Glassmorphism styles
+* **Icons:** Lucide React
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 📂 Modular Architecture
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The codebase follows a strict **Separation of Concerns (SoC)** model:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+tonaly/
+├── public/                     # Static icons & assets
+├── src/
+│   ├── components/             # Reusable UI & layouts
+│   ├── services/               # Firebase Authentication & Firestore connection
+│   ├── store/                  # Zustand modular state management
+│   ├── hooks/                  # React hooks (synthesizer, offline triggers)
+│   ├── lib/                    # Decoupled domain math & calculations
+│   │   └── music-theory/       # Pure TypeScript music theory engine
+│   ├── pages/                  # Application pages (Dashboard, Tool)
+│   └── types/                  # Common types
+└── vite.config.ts              # Build, Tailwind v4 & PWA service worker configurations
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🚀 Getting Started (Local Testing)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Clone the repository and install dependencies:
+```bash
+npm install
 ```
+
+### 2. Environment Configuration:
+Copy the configuration sample:
+```bash
+cp .env.example .env.local
+```
+Fill out `.env.local` with your active Firebase credentials from the console. If not populated, the application will seamlessly fall back to **Local Mock Mode** so the visual tool and mock user indicator remain fully active for developer preview!
+
+### 3. Start the development server:
+```bash
+npm run dev
+```
+Open your browser at **[http://localhost:5173/](http://localhost:5173/)** to preview the app!
+
+### 4. Create a production build with PWA capabilities:
+```bash
+npm run build
+```
+
+---
+
+## 🌩 Deployment to Firebase Hosting
+
+1. Install the CLI globally if needed:
+   ```bash
+   npm install -g firebase-tools
+   ```
+2. Log in and associate with your project:
+   ```bash
+   firebase login
+   firebase use default
+   ```
+3. Deploy Hosting to `tonaly.bervos.org`:
+   ```bash
+   npm run build
+   firebase deploy --only hosting
+   ```
