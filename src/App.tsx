@@ -228,19 +228,12 @@ function App() {
           {loading ? (
             <div className="h-9 w-24 bg-slate-800/80 rounded-lg"></div>
           ) : user ? (
-            <div className="flex items-center space-x-3">
-              {user.photoURL && (
-                <img 
-                  src={user.photoURL} 
-                  alt={user.displayName || 'User'} 
-                  className="w-8 h-8 rounded-full border border-cyan-500/40" 
-                />
-              )}
+            <div className="flex items-center">
               <button 
                 onClick={handleLogout}
-                className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs px-3 py-2 rounded-lg transition border border-slate-800"
+                className="flex items-center space-x-1.5 bg-slate-900/85 hover:bg-rose-950/25 text-slate-300 hover:text-rose-400 text-xs px-3 py-2 rounded-lg transition border border-slate-800 hover:border-rose-950/30 group font-semibold animate-fadeIn"
               >
-                <LogOut className="h-3.5 w-3.5" />
+                <LogOut className="h-3.5 w-3.5 text-rose-500/80 group-hover:text-rose-400 transition" />
                 <span className="hidden sm:inline">Sign Out</span>
               </button>
             </div>
