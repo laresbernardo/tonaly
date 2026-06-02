@@ -224,6 +224,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
     
     if (userId) {
       try {
+        // 1. Fetch cloud history
         const q = query(
           collection(db, 'users', userId, 'history'),
           orderBy('timestamp', 'desc'),
@@ -244,7 +245,38 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
             item: data.item
           });
         });
-        set({ history: fetched, loadingHistory: false });
+
+        // 2. Check for any unsynced local guest history in memory
+        const { history: currentHistory } = get();
+        const guestItems = currentHistory.filter(item => item.id.startsWith('local_'));
+
+        if (guestItems.length > 0) {
+          console.log(`Syncing ${guestItems.length} guest history items to user account...`);
+          const syncedGuestItems: HistoryItem[] = [];
+          
+          // Sync guest items to Firestore oldest first (chronological)
+          const sortedGuestItems = [...guestItems].sort((a, b) => a.timestamp - b.timestamp);
+          
+          for (const item of sortedGuestItems) {
+            const { id, ...firestoreItem } = item;
+            try {
+              const docRef = await addDoc(collection(db, 'users', userId, 'history'), firestoreItem);
+              syncedGuestItems.push({ ...item, id: docRef.id });
+            } catch (err) {
+              console.error('Error syncing guest item to cloud:', err);
+              // Keep local ID as fallback if Firestore sync fails
+              syncedGuestItems.push(item);
+            }
+          }
+
+          // Combine, sort, and store
+          const combined = [...syncedGuestItems, ...fetched];
+          combined.sort((a, b) => b.timestamp - a.timestamp);
+
+          set({ history: combined, loadingHistory: false });
+        } else {
+          set({ history: fetched, loadingHistory: false });
+        }
       } catch (e) {
         console.error('Failed to fetch Firestore history:', e);
         set({ history: [], loadingHistory: false });
