@@ -171,7 +171,7 @@ function App() {
         <div className="absolute top-[40%] left-[30%] w-[45%] h-[45%] rounded-full bg-blue-950/10 blur-[120px] pointer-events-none" />
       </div>
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+      <header className="glass-panel sticky top-0 z-50 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div 
           onClick={() => setInStudio(false)} 
           className="flex items-center space-x-3 cursor-pointer group select-none"

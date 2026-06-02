@@ -25,7 +25,7 @@ export const Piano: React.FC<PianoProps> = ({
 
   const handleKeyStrike = (note: string) => {
     if (!interactive) return;
-    pianoSynth.playNote(note, 1.0);
+    pianoSynth.playNote(note, 2.5);
     if (onKeyClick) {
       onKeyClick(note);
     }
@@ -64,7 +64,11 @@ export const Piano: React.FC<PianoProps> = ({
             return (
               <button
                 key={note}
-                onClick={() => handleKeyStrike(note)}
+                onMouseDown={() => handleKeyStrike(note)}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleKeyStrike(note);
+                }}
                 className={`flex-1 border-r transition duration-100 flex items-end justify-center pb-4 font-mono text-[10px] sm:text-xs font-bold uppercase focus:outline-none piano-key-shadow ${bgClass} ${textClass}`}
                 style={{ zIndex: 1 }}
               >
@@ -104,7 +108,11 @@ export const Piano: React.FC<PianoProps> = ({
               return (
                 <div key={`wrapper-${whiteNote}`} className="flex-1 relative flex justify-end pointer-events-none">
                   <button
-                    onClick={() => handleKeyStrike(blackNote)}
+                    onMouseDown={() => handleKeyStrike(blackNote)}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      handleKeyStrike(blackNote);
+                    }}
                     className={`absolute right-0 w-[55%] h-full transition duration-100 pointer-events-auto focus:outline-none transform translate-x-1/2 ${bgClass}`}
                   />
                 </div>

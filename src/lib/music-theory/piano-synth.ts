@@ -6,7 +6,9 @@ class PianoSynth {
   // Initialize AudioContext lazily upon user interaction (browser policy compliance)
   private getAudioContext(): AudioContext {
     if (!this.audioCtx) {
-      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
+        latencyHint: 'interactive'
+      });
     }
     if (this.audioCtx.state === 'suspended') {
       this.audioCtx.resume();
@@ -15,31 +17,29 @@ class PianoSynth {
   }
 
   /**
-   * Synthesizes a highly realistic, organic piano key strike using additive synthesis.
+   * Synthesizes an organic, rich acoustic piano strike with natural wood resonance and long tail.
    */
-  public playNote(note: string, duration: number = 1.2): void {
+  public playNote(note: string, duration: number = 2.5): void {
     const ctx = this.getAudioContext();
     const freq = getNoteFrequency(note);
-    
     const now = ctx.currentTime;
     
-    // 1. Master gain node for the overall note volume envelope
+    // 1. Master gain node with realistic piano string physical vibration envelope
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0, now);
-    // Sharp attack corresponding to a physical hammer strike
-    masterGain.gain.linearRampToValueAtTime(0.3, now + 0.015);
-    // Natural exponential decay of the string vibration
-    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    masterGain.gain.linearRampToValueAtTime(0.3, now + 0.01); // Sharp physical hammer strike
+    masterGain.gain.exponentialRampToValueAtTime(0.12, now + 0.35); // Fast initial energy dispersion
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration); // Natural slow ringout tail
+    
     masterGain.connect(ctx.destination);
 
-    // 2. Additive Harmonics Synthesis for an authentic acoustic piano timbre
-    // Real pianos have a fundamental and multiple decay harmonics:
+    // 2. Classic Acoustically-Voiced Harmonic Spectrum (mix of Sines and Triangles for wood soundboard resonance)
     const harmonics = [
       { ratio: 1, gain: 0.6, type: 'sine' as OscillatorType },       // Fundamental
-      { ratio: 2, gain: 0.2, type: 'sine' as OscillatorType },       // 1st Octave Harmonic
-      { ratio: 3, gain: 0.08, type: 'triangle' as OscillatorType },  // Perfect 5th Octave Harmonic
-      { ratio: 4, gain: 0.05, type: 'sine' as OscillatorType },       // 2nd Octave Harmonic
-      { ratio: 5, gain: 0.02, type: 'triangle' as OscillatorType }    // Major 3rd Harmonic
+      { ratio: 2, gain: 0.24, type: 'sine' as OscillatorType },      // 1st Octave Harmonic
+      { ratio: 3, gain: 0.1, type: 'triangle' as OscillatorType },   // Perfect 5th Octave Harmonic
+      { ratio: 4, gain: 0.05, type: 'sine' as OscillatorType },      // 2nd Octave Harmonic
+      { ratio: 5, gain: 0.02, type: 'triangle' as OscillatorType }   // Major 3rd Harmonic
     ];
 
     harmonics.forEach((harmonic) => {
@@ -49,11 +49,11 @@ class PianoSynth {
       osc.type = harmonic.type;
       osc.frequency.setValueAtTime(freq * harmonic.ratio, now);
       
-      // Add slight detuning to mimic real multiple strings structure
-      osc.detune.setValueAtTime((Math.random() - 0.5) * 6, now);
+      // Subtle detuning of individual strings to mimic physical triple-string acoustic piano setup
+      osc.detune.setValueAtTime((Math.random() - 0.5) * 5, now);
       
       gainNode.gain.setValueAtTime(harmonic.gain, now);
-      // High frequencies decay faster in real piano strings
+      // High frequency harmonics decay faster due to physical friction
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration * (1 / Math.sqrt(harmonic.ratio)));
       
       osc.connect(gainNode);
@@ -65,22 +65,22 @@ class PianoSynth {
   }
 
   /**
-   * Plays an interval: two notes sequentially or simultaneously.
+   * Plays an interval with beautiful natural ringing decay.
    */
   public playInterval(
     note1: string, 
     note2: string, 
     type: 'melodic' | 'harmonic' = 'melodic',
-    tempoMs: number = 600
+    tempoMs: number = 650
   ): void {
     if (type === 'melodic') {
-      this.playNote(note1, 1.0);
+      this.playNote(note1, 2.0);
       setTimeout(() => {
-        this.playNote(note2, 1.2);
+        this.playNote(note2, 2.5);
       }, tempoMs);
     } else {
-      this.playNote(note1, 1.4);
-      this.playNote(note2, 1.4);
+      this.playNote(note1, 2.5);
+      this.playNote(note2, 2.5);
     }
   }
 }

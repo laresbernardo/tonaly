@@ -114,7 +114,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
       });
 
       // Play sound
-      pianoSynth.playNote(baseNote, 1.5);
+      pianoSynth.playNote(baseNote, 2.5);
     } else {
       // Interval Mode: Determine playable intervals semitones
       let semitoneOptions: number[] = [];
@@ -167,7 +167,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
     if (!currentTest) return;
 
     if (gameMode === 'Note Identification') {
-      pianoSynth.playNote(currentTest.baseNote, 1.5);
+      pianoSynth.playNote(currentTest.baseNote, 2.5);
     } else if (currentTest.targetNote) {
       pianoSynth.playInterval(currentTest.baseNote, currentTest.targetNote, 'melodic', 650);
     }
