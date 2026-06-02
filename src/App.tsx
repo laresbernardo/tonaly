@@ -49,58 +49,11 @@ const formatDate = (timestamp: number) => {
 };
 
 function App() {
-  // Determine initial view state from the browser URL path
-  const getInitialStateFromPath = () => {
-    const path = window.location.pathname;
-    if (path === '/arena') return { inStudio: true, tab: 'training' as const };
-    if (path === '/insights') return { inStudio: true, tab: 'analytics' as const };
-    if (path === '/data') return { inStudio: true, tab: 'history' as const };
-    return { inStudio: false, tab: 'training' as const };
-  };
-
-  const initialState = getInitialStateFromPath();
-
   // Auth and environment state
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history'>(initialState.tab);
-  const [inStudio, setInStudio] = useState(initialState.inStudio);
-
-  // Sync state changes back to the browser's address bar URL path
-  useEffect(() => {
-    let targetPath = '/';
-    if (inStudio) {
-      if (activeTab === 'training') targetPath = '/arena';
-      else if (activeTab === 'analytics') targetPath = '/insights';
-      else if (activeTab === 'history') targetPath = '/data';
-    }
-    
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, '', targetPath);
-    }
-  }, [inStudio, activeTab]);
-
-  // Handle browser Back/Forward button clicks (popstate events)
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/arena') {
-        setInStudio(true);
-        setActiveTab('training');
-      } else if (path === '/insights') {
-        setInStudio(true);
-        setActiveTab('analytics');
-      } else if (path === '/data') {
-        setInStudio(true);
-        setActiveTab('history');
-      } else {
-        setInStudio(false);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history'>('training');
+  const [inStudio, setInStudio] = useState(false);
 
   // Zustand Global Ear Training States
   const {
