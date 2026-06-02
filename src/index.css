@@ -22,3 +22,12 @@
 .piano-key-shadow {
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3), inset 0px -2px 0px rgba(0, 0, 0, 0.2);
 }
+
+/* Hide scrollbar utility classes */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

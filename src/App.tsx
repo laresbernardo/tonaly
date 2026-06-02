@@ -17,6 +17,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { useTheoryStore } from './store/useTheoryStore';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import LandingPage from './components/LandingPage';
 import { ALL_NOTES } from './lib/music-theory/notes';
 import { INTERVAL_MAP } from './lib/music-theory/intervals';
 
@@ -52,6 +53,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history'>('training');
+  const [inStudio, setInStudio] = useState(false);
 
   // Zustand Global Ear Training States
   const {
@@ -89,6 +91,9 @@ function App() {
       setUser(currentUser);
       setLoading(false);
       loadHistory(currentUser ? currentUser.uid : null);
+      if (currentUser) {
+        setInStudio(true);
+      }
     });
 
     return () => {
@@ -167,45 +172,58 @@ function App() {
       </div>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+        <div 
+          onClick={() => setInStudio(false)} 
+          className="flex items-center space-x-3 cursor-pointer group select-none"
+        >
           <img
             src="/logo.png"
             alt="Tonaly"
-            className="h-9 w-9 rounded-xl object-cover border border-cyan-500/30 shadow-md"
+            className="h-9 w-9 rounded-xl object-cover border border-cyan-500/30 shadow-md group-hover:border-cyan-400 transition"
           />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight m-0 text-white leading-none">Tonaly</h1>
+            <h1 className="text-2xl font-bold tracking-tight m-0 text-white leading-none group-hover:text-cyan-300 transition">Tonaly</h1>
             <span className="text-xs text-slate-400 font-medium tracking-wider uppercase">Ear Training Studio</span>
           </div>
         </div>
 
         {/* Middle Navigation Tabs */}
-        <nav className="hidden md:flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800/60">
-          <button
-            onClick={() => setActiveTab('training')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'training' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-          >
-            Arena
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'analytics' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-          >
-            Insights
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'history' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-          >
-            Data
-          </button>
-        </nav>
+        {inStudio && (
+          <nav className="hidden md:flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800/60 animate-fadeIn">
+            <button
+              onClick={() => setActiveTab('training')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'training' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              Arena
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'analytics' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              Insights
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'history' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              Data
+            </button>
+          </nav>
+        )}
 
         {/* Right Side Controls */}
         <div className="flex items-center space-x-4">
+          {!inStudio && (
+            <button
+              onClick={() => setInStudio(true)}
+              className="hidden sm:flex items-center bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs px-4 py-2 rounded-lg font-bold transition uppercase tracking-wider"
+            >
+              Enter Studio
+            </button>
+          )}
 
           {loading ? (
             <div className="h-9 w-24 bg-slate-800/80 rounded-lg"></div>
@@ -215,56 +233,90 @@ function App() {
                 <img 
                   src={user.photoURL} 
                   alt={user.displayName || 'User'} 
-                    className="w-8 h-8 rounded-full border border-cyan-500/40" 
+                  className="w-8 h-8 rounded-full border border-cyan-500/40" 
                 />
-                )}
+              )}
               <button 
                 onClick={handleLogout}
-                  className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs px-3 py-2 rounded-lg transition border border-slate-800"
+                className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs px-3 py-2 rounded-lg transition border border-slate-800"
               >
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Sign Out</span>
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
               </button>
             </div>
           ) : (
-            <button 
-              onClick={handleSignIn}
-                  className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-4 py-2 rounded-lg transition font-bold shadow-lg shadow-cyan-600/20 uppercase tracking-wider"
-            >
-                  <LogIn className="h-3.5 w-3.5" />
-                  <span>Sign In</span>
-            </button>
+            <div className="flex items-center space-x-2.5">
+              {inStudio && (
+                <span className="hidden md:inline-flex items-center space-x-1 bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                  <span>Guest Mode</span>
+                </span>
+              )}
+              <button 
+                onClick={handleSignIn}
+                className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-4 py-2 rounded-lg transition font-bold shadow-lg shadow-cyan-600/20 uppercase tracking-wider"
+              >
+                <LogIn className="h-3.5 w-3.5" />
+                <span>Sign In</span>
+              </button>
+            </div>
           )}
         </div>
       </header>
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 flex-grow">
+        {!inStudio ? (
+          <LandingPage
+            onPlayAsGuest={() => setInStudio(true)}
+            onSignIn={handleSignIn}
+            user={user}
+          />
+        ) : (
+          <>
+            {/* Mobile Tab Selectors */}
+            <div className="flex md:hidden items-center justify-center bg-slate-900 p-1 rounded-xl border border-slate-800 mb-6">
+              <button
+                onClick={() => setActiveTab('training')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'training' ? 'bg-cyan-600 text-white' : 'text-slate-400'
+                  }`}
+              >
+                Arena
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'analytics' ? 'bg-cyan-600 text-white' : 'text-slate-400'
+                  }`}
+              >
+                Insights
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'history' ? 'bg-cyan-600 text-white' : 'text-slate-400'
+                  }`}
+              >
+                Data
+              </button>
+            </div>
 
-        {/* Mobile Tab Selectors */}
-        <div className="flex md:hidden items-center justify-center bg-slate-900 p-1 rounded-xl border border-slate-800 mb-6">
-          <button
-            onClick={() => setActiveTab('training')}
-            className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'training' ? 'bg-cyan-600 text-white' : 'text-slate-400'
-              }`}
-          >
-            Arena
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'analytics' ? 'bg-cyan-600 text-white' : 'text-slate-400'
-              }`}
-          >
-            Insights
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'history' ? 'bg-cyan-600 text-white' : 'text-slate-400'
-              }`}
-          >
-            Data
-          </button>
-        </div>
+            {/* Guest Gating Notice Banner */}
+            {!user && (
+              <div className="bg-orange-500/10 border border-orange-500/25 text-orange-300 rounded-2xl p-4 mb-6 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fadeIn">
+                <div className="flex items-start space-x-2.5">
+                  <span className="text-base shrink-0 mt-0.5">⚠️</span>
+                  <div>
+                    <p className="font-bold text-orange-200">Playing in Guest Sandbox Mode</p>
+                    <p className="text-slate-400 mt-0.5">Your history and insights will reset to scratch if you reload or close this page. Sign in to enable permanent cloud sync.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignIn}
+                  className="bg-orange-500 hover:bg-orange-400 text-slate-950 px-4 py-2 rounded-lg font-extrabold tracking-wider uppercase shrink-0 transition text-[10px] shadow-md shadow-orange-500/10"
+                >
+                  Sync to Cloud
+                </button>
+              </div>
+            )}
 
         {/* TAB 1: PRACTICE ARENA */}
         {activeTab === 'training' && (
@@ -629,6 +681,8 @@ function App() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </main>
 

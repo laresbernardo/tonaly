@@ -215,11 +215,6 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
         } catch (e) {
           console.warn('Firestore logging failed, saved locally:', e);
         }
-      } else {
-        // Sync with local storage for guests
-        const cached = localStorage.getItem('tonaly_guest_history');
-        const currentCache = cached ? JSON.parse(cached) : [];
-        localStorage.setItem('tonaly_guest_history', JSON.stringify([fullHistoryItem, ...currentCache]));
       }
     }
   },
@@ -251,22 +246,16 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
         });
         set({ history: fetched, loadingHistory: false });
       } catch (e) {
-        console.error('Failed to fetch Firestore history, loading local storage:', e);
-        // fallback to local guest cache
-        const cached = localStorage.getItem('tonaly_guest_history');
-        set({ history: cached ? JSON.parse(cached) : [], loadingHistory: false });
+        console.error('Failed to fetch Firestore history:', e);
+        set({ history: [], loadingHistory: false });
       }
     } else {
-      const cached = localStorage.getItem('tonaly_guest_history');
-      set({ history: cached ? JSON.parse(cached) : [], loadingHistory: false });
+      // Guest history resets on refresh (starts from scratch)
+      set({ history: [], loadingHistory: false });
     }
   },
 
   clearHistory: () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      localStorage.removeItem('tonaly_guest_history');
-    }
     set({ history: [] });
   },
 
@@ -283,13 +272,6 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
         }
       } catch (e) {
         console.error('Failed to delete Firestore log:', e);
-      }
-    } else {
-      const cached = localStorage.getItem('tonaly_guest_history');
-      if (cached) {
-        const currentCache = JSON.parse(cached);
-        const updatedCache = currentCache.filter((item: any) => item.id !== itemId);
-        localStorage.setItem('tonaly_guest_history', JSON.stringify(updatedCache));
       }
     }
   }

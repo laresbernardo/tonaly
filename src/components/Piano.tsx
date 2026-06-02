@@ -8,6 +8,7 @@ interface PianoProps {
   onKeyClick?: (note: string) => void;
   correctNote?: string | null;  // For showing answers on the piano
   incorrectNote?: string | null;// For showing wrong guesses on the piano
+  customRange?: string[];       // Optional custom range of notes
 }
 
 
@@ -16,10 +17,11 @@ export const Piano: React.FC<PianoProps> = ({
   interactive = true,
   onKeyClick,
   correctNote = null,
-  incorrectNote = null
+  incorrectNote = null,
+  customRange
 }) => {
-  // Display notes from C4 to C5 for a standard visual center
-  const pianoRange = ALL_NOTES.filter(note => /[4-5]/.test(note)).slice(3, 16); // C4 to C5 inclusive
+  // Display notes from C4 to C5 for a standard visual center or use customRange
+  const pianoRange = customRange || ALL_NOTES.filter(note => /[4-5]/.test(note)).slice(3, 16); // C4 to C5 inclusive
 
   const handleKeyStrike = (note: string) => {
     if (!interactive) return;
@@ -35,26 +37,27 @@ export const Piano: React.FC<PianoProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center w-full my-6">
-      <div className="relative flex justify-center bg-slate-950 p-4 rounded-3xl border border-slate-800/80 shadow-2xl max-w-full overflow-x-auto select-none">
-        <div className="relative flex h-48 sm:h-64 min-w-[320px] sm:min-w-[600px]">
+    <div className="flex flex-col items-center w-full my-4">
+      {/* Sleek parent container with scrollbar hidden natively */}
+      <div className="relative w-full bg-slate-950 p-5 rounded-3xl border border-slate-800/80 shadow-3xl overflow-x-auto scrollbar-none select-none">
+        <div className="relative flex h-36 sm:h-44 min-w-[600px] lg:min-w-full">
           {/* 1. White Keys Render */}
           {pianoRange.filter(n => !isBlackKey(n)).map((note) => {
             const isActive = activeNotes.includes(note);
             const isCorrect = correctNote === note;
             const isWrong = incorrectNote === note;
 
-            let bgClass = 'bg-white hover:bg-slate-100 active:bg-slate-200 border-slate-200';
+            let bgClass = 'bg-gradient-to-b from-slate-50 to-slate-100 hover:from-white hover:to-slate-50 border-slate-200 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.05)] border-b-[6px] rounded-b-xl active:from-slate-100 active:to-slate-200';
             let textClass = 'text-slate-400';
 
             if (isCorrect) {
-              bgClass = 'bg-emerald-500 border-emerald-600 shadow-inner';
+              bgClass = 'bg-gradient-to-b from-emerald-400 to-emerald-500 border-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)] border-b-[4px] rounded-b-xl';
               textClass = 'text-white';
             } else if (isWrong) {
-              bgClass = 'bg-rose-500 border-rose-600 shadow-inner';
+              bgClass = 'bg-gradient-to-b from-rose-400 to-rose-500 border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.4)] border-b-[4px] rounded-b-xl';
               textClass = 'text-white';
             } else if (isActive) {
-              bgClass = 'bg-cyan-500 border-cyan-600 shadow-inner';
+              bgClass = 'bg-gradient-to-b from-cyan-400 to-cyan-500 border-cyan-600 shadow-[0_0_15px_rgba(34,211,238,0.4)] border-b-[4px] rounded-b-xl';
               textClass = 'text-white';
             }
 
@@ -62,19 +65,18 @@ export const Piano: React.FC<PianoProps> = ({
               <button
                 key={note}
                 onClick={() => handleKeyStrike(note)}
-                className={`flex-1 border-r border-b-8 rounded-b-lg transition duration-100 flex items-end justify-center pb-4 font-mono text-xs sm:text-sm font-bold uppercase focus:outline-none piano-key-shadow ${bgClass} ${textClass}`}
+                className={`flex-1 border-r transition duration-100 flex items-end justify-center pb-4 font-mono text-[10px] sm:text-xs font-bold uppercase focus:outline-none piano-key-shadow ${bgClass} ${textClass}`}
                 style={{ zIndex: 1 }}
               >
-                <span>{note.replace('4', '').replace('5', '')}</span>
+                <span>{note.replace(/[0-9]/g, '')}</span>
               </button>
             );
           })}
 
           {/* 2. Black Keys Render Overlay */}
-          <div className="absolute top-0 left-0 w-full h-3/5 flex pointer-events-none" style={{ zIndex: 2 }}>
+          <div className="absolute top-0 left-0 w-full h-[62%] flex pointer-events-none" style={{ zIndex: 2 }}>
             {pianoRange.filter(n => !isBlackKey(n)).map(whiteNote => {
               // Standard piano black keys offsets
-              // Black keys exist between C-D, D-E, F-G, G-A, A-B
               const noteLetter = whiteNote.charAt(0);
               const octave = whiteNote.charAt(1);
               
@@ -89,25 +91,21 @@ export const Piano: React.FC<PianoProps> = ({
               const isCorrect = correctNote === blackNote;
               const isWrong = incorrectNote === blackNote;
 
-              let bgClass = 'bg-slate-900 hover:bg-slate-800 active:bg-slate-700';
+              let bgClass = 'bg-gradient-to-b from-slate-900 to-slate-950 border-slate-950 border-b-[6px] border-x rounded-b-md shadow-[0_4px_6px_rgba(0,0,0,0.4)] hover:from-slate-850 hover:to-slate-900 active:from-slate-800';
 
               if (isCorrect) {
-                bgClass = 'bg-emerald-500 border-emerald-600';
+                bgClass = 'bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-700 border-b-[4px] rounded-b-md shadow-[0_0_12px_rgba(16,185,129,0.5)]';
               } else if (isWrong) {
-                bgClass = 'bg-rose-500 border-rose-600';
+                bgClass = 'bg-gradient-to-b from-rose-500 to-rose-600 border-rose-700 border-b-[4px] rounded-b-md shadow-[0_0_12px_rgba(244,63,94,0.5)]';
               } else if (isActive) {
-                bgClass = 'bg-cyan-500 border-cyan-600';
+                bgClass = 'bg-gradient-to-b from-cyan-500 to-cyan-600 border-cyan-700 border-b-[4px] rounded-b-md shadow-[0_0_12px_rgba(34,211,238,0.5)]';
               }
 
               return (
                 <div key={`wrapper-${whiteNote}`} className="flex-1 relative flex justify-end pointer-events-none">
                   <button
                     onClick={() => handleKeyStrike(blackNote)}
-                    className={`absolute right-0 w-7 sm:w-10 h-full rounded-b-md border-b-4 border-x border-slate-950 transition duration-100 pointer-events-auto focus:outline-none ${bgClass}`}
-                    style={{ 
-                      transform: 'translateX(50%)', 
-                      boxShadow: '0px 3px 5px rgba(0,0,0,0.5)'
-                    }}
+                    className={`absolute right-0 w-[55%] h-full transition duration-100 pointer-events-auto focus:outline-none transform translate-x-1/2 ${bgClass}`}
                   />
                 </div>
               );
@@ -115,8 +113,8 @@ export const Piano: React.FC<PianoProps> = ({
           </div>
         </div>
       </div>
-      <span className="text-xs text-slate-500 mt-3 font-semibold tracking-wider uppercase">
-        {interactive ? '👉 Click keys to test sounds' : '🎹 Played keys highlighted above'}
+      <span className="text-[10px] text-slate-500 mt-3 font-bold tracking-wider uppercase select-none flex items-center space-x-1">
+        <span>👉</span> <span>Click keys to play audio and identify note/interval relations</span>
       </span>
     </div>
   );
