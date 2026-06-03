@@ -64,8 +64,7 @@ export const Piano: React.FC<PianoProps> = ({
             return (
               <button
                 key={note}
-                onMouseDown={() => handleKeyStrike(note)}
-                onTouchStart={(e) => {
+                onPointerDown={(e) => {
                   e.preventDefault();
                   handleKeyStrike(note);
                 }}
@@ -108,8 +107,7 @@ export const Piano: React.FC<PianoProps> = ({
               return (
                 <div key={`wrapper-${whiteNote}`} className="flex-1 relative flex justify-end pointer-events-none">
                   <button
-                    onMouseDown={() => handleKeyStrike(blackNote)}
-                    onTouchStart={(e) => {
+                    onPointerDown={(e) => {
                       e.preventDefault();
                       handleKeyStrike(blackNote);
                     }}
