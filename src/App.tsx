@@ -13,7 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { signInWithGoogle, logout, auth } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { useTheoryStore } from './store/useTheoryStore';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
@@ -95,6 +95,11 @@ function App() {
 
   // Auth subscriber and history loader
   useEffect(() => {
+    // Process redirect result if returning from a Google redirect
+    getRedirectResult(auth).catch((error) => {
+      console.error('Redirect sign-in error:', error);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);

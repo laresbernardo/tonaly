@@ -2,10 +2,9 @@ import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithRedirect, 
   signOut 
 } from 'firebase/auth';
-import type { User } from 'firebase/auth';
 import { 
   getFirestore, 
   enableMultiTabIndexedDbPersistence 
@@ -49,10 +48,9 @@ if (typeof window !== 'undefined') {
 }
 
 // Helper functions for authentication
-export const signInWithGoogle = async (): Promise<User> => {
+export const signInWithGoogle = async (): Promise<void> => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    await signInWithRedirect(auth, googleProvider);
   } catch (error) {
     console.error('Error signing in with Google:', error);
     throw error;
