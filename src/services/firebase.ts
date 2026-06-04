@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  signInWithRedirect, 
+  signInWithPopup, 
   signOut 
 } from 'firebase/auth';
 import { 
@@ -50,7 +50,7 @@ if (typeof window !== 'undefined') {
 // Helper functions for authentication
 export const signInWithGoogle = async (): Promise<void> => {
   try {
-    await signInWithRedirect(auth, googleProvider);
+    await signInWithPopup(auth, googleProvider);
   } catch (error) {
     console.error('Error signing in with Google:', error);
     throw error;

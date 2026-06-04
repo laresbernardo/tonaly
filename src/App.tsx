@@ -4,13 +4,21 @@ import {
   Music, 
   LogIn, 
   LogOut, 
-  Play,
+  Repeat,
   Volume2,
   History,
-  Settings,
   Trophy,
   RotateCcw,
-  Trash2
+  Trash2,
+  Lightbulb,
+  Wifi,
+  WifiOff,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+  CheckCircle2,
+  Check,
+  X
 } from 'lucide-react';
 import { signInWithGoogle, logout, auth } from './services/firebase';
 import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
@@ -20,22 +28,11 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import LandingPage from './components/LandingPage';
 import { ALL_NOTES } from './lib/music-theory/notes';
 import { INTERVAL_MAP } from './lib/music-theory/intervals';
+import MnemonicEditor from './components/MnemonicEditor';
+import MnemonicsLibrary from './components/MnemonicsLibrary';
+import { getMnemonicWithDefault } from './lib/music-theory/default-references';
 
-// Helper to parse simple markdown double asterisks **bold** into JSX strong tags
-const renderBoldText = (text: string) => {
-  if (!text) return null;
-  const parts = text.split(/\*\*([^*]+)\*\*/g);
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (index % 2 === 1) {
-          return <strong key={index} className="font-bold text-cyan-400">{part}</strong>;
-        }
-        return part;
-      })}
-    </>
-  );
-};
+
 
 const formatDate = (timestamp: number) => {
   const date = new Date(timestamp);
@@ -52,8 +49,20 @@ function App() {
   // Auth and environment state
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history'>('training');
+  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history' | 'mnemonics'>('training');
   const [inStudio, setInStudio] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleLogoClick = () => {
     setInStudio(false);
@@ -70,6 +79,7 @@ function App() {
     customNotes,
     customIntervals,
     logResults,
+    intervalDirection,
     testActive,
     currentTest,
     userGuess,
@@ -82,16 +92,42 @@ function App() {
     setCustomNotes,
     setCustomIntervals,
     setLogResults,
+    setIntervalDirection,
     generateNewTest,
     rehearTest,
     submitGuess,
     loadHistory,
     clearHistory,
-    deleteHistoryItem
+    deleteHistoryItem,
+    mnemonics,
+    loadMnemonics
   } = useTheoryStore();
 
-  // Local UI toggle for "Custom configuration" drawer
   const [showCustomConfig, setShowCustomConfig] = useState(false);
+
+  const pendingSyncCount = useMemo(() => {
+    if (!user) return 0;
+    return resultsHistory.filter(item => item.synced === false).length;
+  }, [user, resultsHistory]);
+  const [revealedHints, setRevealedHints] = useState<string[]>([]);
+
+  // Reset revealedHints when currentTest changes
+  useEffect(() => {
+    setRevealedHints([]);
+  }, [currentTest]);
+
+  const allRefsForCurrentTest = useMemo(() => {
+    if (!currentTest?.correctAnswer) return [];
+    return getMnemonicWithDefault(currentTest.correctAnswer, mnemonics);
+  }, [currentTest, mnemonics]);
+
+  const handleRevealHint = () => {
+    const remainingRefs = allRefsForCurrentTest.filter(ref => !revealedHints.includes(ref));
+    if (remainingRefs.length > 0) {
+      const randomRef = remainingRefs[Math.floor(Math.random() * remainingRefs.length)];
+      setRevealedHints([...revealedHints, randomRef]);
+    }
+  };
 
   // Auth subscriber and history loader
   useEffect(() => {
@@ -104,6 +140,7 @@ function App() {
       setUser(currentUser);
       setLoading(false);
       loadHistory(currentUser ? currentUser.uid : null);
+      loadMnemonics(currentUser ? currentUser.uid : null);
       if (currentUser) {
         setInStudio(true);
       }
@@ -295,6 +332,13 @@ function App() {
             >
               Data
             </button>
+            <button
+              onClick={() => setActiveTab('mnemonics')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition uppercase tracking-wider ${activeTab === 'mnemonics' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              Mnemonics
+            </button>
           </nav>
         )}
 
@@ -315,10 +359,10 @@ function App() {
             <div className="flex items-center">
               <button 
                 onClick={handleLogout}
-                className="flex items-center space-x-1.5 bg-slate-900/85 hover:bg-rose-950/25 text-slate-300 hover:text-rose-400 text-xs px-3 py-2 rounded-lg transition border border-slate-800 hover:border-rose-950/30 group font-semibold animate-fadeIn"
+                  className="flex items-center justify-center bg-slate-900/85 hover:bg-rose-950/25 text-slate-300 hover:text-rose-400 p-2 rounded-lg transition border border-slate-800 hover:border-rose-950/30 group animate-fadeIn"
+                  title="Sign Out"
               >
-                <LogOut className="h-3.5 w-3.5 text-rose-500/80 group-hover:text-rose-400 transition" />
-                <span className="hidden sm:inline">Sign Out</span>
+                  <LogOut className="h-4 w-4 text-rose-500/80 group-hover:text-rose-400 transition" />
               </button>
             </div>
           ) : (
@@ -374,6 +418,13 @@ function App() {
               >
                 Data
               </button>
+                <button
+                  onClick={() => setActiveTab('mnemonics')}
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'mnemonics' ? 'bg-cyan-600 text-white' : 'text-slate-400'
+                    }`}
+                >
+                  Mnemonics
+                </button>
             </div>
 
             {/* Guest Gating Notice Banner */}
@@ -401,11 +452,7 @@ function App() {
 
             {/* LEFT SIDEBAR: SETTINGS & CONFIG */}
             <div className="lg:col-span-4 space-y-6">
-              <div className="glass-panel p-6 rounded-3xl border border-slate-800/60">
-                <h2 className="text-base font-bold text-white mb-4 flex items-center space-x-2">
-                  <Settings className="h-5 w-5 text-cyan-400" />
-                  <span>Configuration</span>
-                </h2>
+                    <div className="glass-panel p-6 rounded-3xl border border-slate-800/60">
 
                 {/* Game Mode Select */}
                 <div className="space-y-3 mb-6">
@@ -521,7 +568,34 @@ function App() {
                   </div>
                 )}
 
-                {/* Log results toggle */}
+                      {/* Interval Direction Select */}
+                      {gameMode === 'Interval Identification' && (
+                        <div className="space-y-3 mb-6 animate-fadeIn mt-6">
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interval Play Order</label>
+                          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                            <button
+                              onClick={() => setIntervalDirection('low-to-high')}
+                              className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${intervalDirection === 'low-to-high'
+                                ? 'bg-cyan-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                                }`}
+                            >
+                              Low to High
+                            </button>
+                            <button
+                              onClick={() => setIntervalDirection('high-to-low')}
+                              className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${intervalDirection === 'high-to-low'
+                                ? 'bg-cyan-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                                }`}
+                            >
+                              High to Low
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Log results toggle */}
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-800/60">
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-200">Log results to history</span>
@@ -544,73 +618,142 @@ function App() {
               <div className="glass-panel p-6 rounded-3xl border border-slate-800/60 flex flex-col justify-between">
 
                 {/* Arena Header Controls */}
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800/60 mb-4">
-                  <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                    <Volume2 className="h-5 w-5 text-cyan-400" />
-                    <span>Arena</span>
-                  </h2>
+                      <div className="flex items-center justify-end pb-4 border-b border-slate-800/60 mb-4">
                   <div className="flex space-x-2">
+                          {testActive && !hasAnswered && allRefsForCurrentTest.length > 0 && revealedHints.length < allRefsForCurrentTest.length && (
+                            <button
+                              onClick={handleRevealHint}
+                              className="flex items-center space-x-1.5 bg-purple-900/40 hover:bg-purple-900/60 disabled:opacity-40 text-purple-300 text-xs px-3 py-2 rounded-lg border border-purple-800/60 font-bold transition"
+                            >
+                              <Lightbulb className="h-4 w-4 text-purple-400" />
+                              <span className="hidden sm:inline">Hint</span>
+                            </button>
+                          )}
                     <button
                       onClick={rehearTest}
                       disabled={!testActive}
                       className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-800 font-bold transition"
                     >
-                      <Volume2 className="h-4 w-4 text-cyan-400" />
+                      <Repeat className="h-4 w-4 text-cyan-400" />
                       <span>Repeat [R]</span>
                     </button>
                     <button
                       onClick={generateNewTest}
                       className="flex items-center space-x-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-4 py-2 rounded-lg font-bold shadow-lg shadow-cyan-600/20 transition"
                     >
-                      <Play className="h-4 w-4 text-white" />
-                      <span>New Test [Space]</span>
+                      <Volume2 className="h-4 w-4 text-white" />
+                            <span>New [Space]</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Large Visual Stage */}
-                <div className="min-h-[120px] flex flex-col items-center justify-center text-center p-6 bg-slate-950/60 rounded-2xl border border-slate-900 my-4">
+                      <div
+                        className={`min-h-[180px] flex flex-col items-center justify-center text-center p-6 sm:p-8 rounded-3xl border transition-all duration-500 my-4 select-none ${!testActive
+                            ? 'bg-slate-950/40 border-slate-900/80 text-slate-500'
+                            : hasAnswered
+                              ? isCorrect
+                                ? 'border-emerald-500/30 bg-gradient-to-b from-slate-950/90 to-emerald-950/20 text-white animate-glow-correct'
+                                : 'border-rose-500/30 bg-gradient-to-b from-slate-950/90 to-rose-950/20 text-white animate-glow-wrong'
+                              : 'border-slate-800/70 bg-gradient-to-b from-slate-950/60 to-slate-900/40 shadow-inner hover:border-cyan-500/25'
+                          }`}
+                      >
                   {!testActive ? (
-                    <div className="space-y-2">
-                      <Music className="h-10 w-10 text-cyan-500/50 mx-auto" />
-                      <h3 className="text-lg font-bold text-slate-300">Ready to Start?</h3>
-                      <p className="text-xs text-slate-400 max-w-md">
-                        {renderBoldText("Click **New Test** (or press the **Spacebar**) to play a randomized musical ear training test")}
-                      </p>
+                          <div className="space-y-3 animate-fadeIn">
+                            <div className="w-12 h-12 rounded-2xl bg-cyan-950/30 border border-cyan-800/20 flex items-center justify-center mx-auto text-cyan-500/70 shadow-inner">
+                              <Music className="h-6 w-6 animate-pulse" />
+                            </div>
+                            <div className="space-y-1">
+                              <h3 className="text-base font-bold text-slate-200 tracking-tight">Ready for ear training?</h3>
+                              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                                Click <span className="text-cyan-400 font-semibold">New Test</span> or press the <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-[10px] font-mono text-slate-300">Spacebar</kbd> to begin.
+                              </p>
+                            </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                            <div className="space-y-4 w-full">
                       {hasAnswered ? (
-                        <div className="space-y-2 animate-fadeIn">
+                                <div className="space-y-3 animate-fadeIn">
                           <div className="inline-flex items-center justify-center">
                             {isCorrect ? (
-                              <span className="bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 font-extrabold px-4 py-1.5 rounded-full text-xs uppercase tracking-widest">
-                                🎉 Correct Answer!
+                                      <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-extrabold px-3.5 py-1 rounded-full text-[10px] uppercase tracking-wider">
+                                        <Check className="h-3.5 w-3.5" />
+                                        <span>Correct Answer!</span>
                               </span>
                             ) : (
-                              <span className="bg-rose-500/10 border border-rose-500/40 text-rose-400 font-extrabold px-4 py-1.5 rounded-full text-xs uppercase tracking-widest">
-                                ❌ Incorrect Guess
+                                        <span className="inline-flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 font-extrabold px-3.5 py-1 rounded-full text-[10px] uppercase tracking-wider">
+                                          <X className="h-3.5 w-3.5" />
+                                          <span>Incorrect Guess</span>
                               </span>
                             )}
                           </div>
-                          <h3 className="text-2xl font-black text-white">
-                            Answer: <span className="text-cyan-400">{currentTest?.correctAnswer}</span>
-                          </h3>
-                          {gameMode === 'Interval Identification' && currentTest && (
-                            <p className="text-xs text-slate-400">
-                              {renderBoldText(`Played **${currentTest.baseNote}** then **${currentTest.targetNote}**`)}
-                            </p>
-                          )}
+
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest block">
+                                      {isCorrect ? 'You Nailed It' : 'Correct Answer'}
+                                    </span>
+                                    <h3 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-blue-500 tracking-tight">
+                                      {currentTest?.correctAnswer}
+                                    </h3>
+                                  </div>
+
+                                  <div className="flex flex-col items-center gap-3 pt-1">
+                                    {gameMode === 'Interval Identification' && currentTest && (
+                                      <div className="inline-flex items-center gap-2 bg-slate-900/60 px-3 py-1 rounded-full border border-slate-800/80 text-[11px] text-slate-300 font-medium">
+                                        <span className="text-slate-500">Played:</span>
+                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{currentTest.baseNote}</span>
+                                        <span className="text-slate-600">→</span>
+                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{currentTest.targetNote}</span>
+                                      </div>
+                                    )}
+                                    {gameMode === 'Note Identification' && currentTest && (
+                                      <div className="inline-flex items-center gap-2 bg-slate-900/60 px-3 py-1 rounded-full border border-slate-800/80 text-[11px] text-slate-300 font-medium">
+                                        <span className="text-slate-500">Played Note:</span>
+                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{currentTest.correctAnswer}</span>
+                                      </div>
+                                    )}
+
+                                    <div className="w-full mt-2">
+                                      <MnemonicEditor itemName={currentTest?.correctAnswer || ''} center={true} />
+                                    </div>
+                                  </div>
                         </div>
-                        ) : (
+                              ) : (
+                                  <div className="space-y-4 animate-fadeIn">
+                                    {/* Listening/Awaiting Badge */}
+                                    <div className="inline-flex items-center space-x-2 bg-cyan-950/30 border border-cyan-800/40 text-cyan-400 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                      <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                                      </span>
+                                      <span>Listening Mode</span>
+                                    </div>
+
                           <div className="space-y-1">
-                            <h3 className="text-lg font-bold text-cyan-300">
+                                      <h3 className="text-lg sm:text-xl font-bold text-slate-100 tracking-tight">
                               What {gameMode === 'Note Identification' ? 'note' : 'interval'} did you hear?
                             </h3>
-                            <p className="text-xs text-slate-400">
-                              Make your guess using the buttons below!
+                                      <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                                        Select your guess below, or press <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-800 rounded text-[9px] font-mono text-slate-400">R</kbd> to replay.
                             </p>
                           </div>
+
+                                    {revealedHints.length > 0 && (
+                                      <div className="mt-3 text-xs bg-purple-950/25 border border-purple-800/20 rounded-2xl p-3 max-w-sm mx-auto text-purple-300 animate-fadeIn flex flex-col items-center space-y-1.5">
+                                        <span className="font-extrabold text-[10px] text-purple-400 uppercase tracking-widest flex items-center gap-1">
+                                          <Lightbulb className="h-3 w-3" />
+                                          <span>Hint References</span>
+                                        </span>
+                                        <div className="flex flex-wrap gap-1.5 justify-center">
+                                          {revealedHints.map((ref, idx) => (
+                                            <span key={idx} className="bg-purple-900/30 px-2.5 py-0.5 rounded-full border border-purple-500/20 text-[10px] font-medium italic">
+                                              {ref}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                       )}
                     </div>
                   )}
@@ -681,14 +824,54 @@ function App() {
         {/* TAB 3: SESSION LOG TABLE */}
         {activeTab === 'history' && (
           <div className="glass-panel p-6 rounded-3xl border border-slate-800/60">
-            <div className="flex items-center justify-between border-b border-slate-800/60 pb-4 mb-6">
-              <h2 className="text-lg font-black text-white flex items-center space-x-2">
-                <History className="h-5 w-5 text-cyan-400" />
-                <span>Session Log History</span>
-              </h2>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-4 mb-6">
+                    <div className="flex flex-col md:flex-row md:items-center gap-3">
+                      <h2 className="text-lg font-black text-white flex items-center space-x-2">
+                        <History className="h-5 w-5 text-cyan-400" />
+                        <span>Session Log History</span>
+                      </h2>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${isOnline
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                          }`}>
+                          {isOnline ? (
+                            <>
+                              <Wifi className="h-3 w-3 mr-0.5" />
+                              <span>Online</span>
+                            </>
+                          ) : (
+                            <>
+                              <WifiOff className="h-3 w-3 mr-0.5" />
+                              <span>Offline</span>
+                            </>
+                          )}
+                        </span>
+
+                        {user ? (
+                          pendingSyncCount > 0 ? (
+                            <span className="inline-flex items-center space-x-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                              <RefreshCw className="h-3 w-3 mr-0.5 animate-spin" />
+                              <span>Syncing ({pendingSyncCount} pending)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                              <Cloud className="h-3 w-3 mr-0.5" />
+                              <span>Cloud Synced</span>
+                            </span>
+                          )
+                        ) : (
+                          <span className="inline-flex items-center space-x-1 bg-slate-800 border border-slate-700/60 text-slate-400 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                            <CloudOff className="h-3 w-3 mr-0.5" />
+                            <span>Guest Mode (Local)</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
               <button
                 onClick={clearHistory}
-                className="flex items-center space-x-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs px-3.5 py-2 rounded-lg font-bold transition"
+                      className="flex items-center space-x-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs px-3.5 py-2 rounded-lg font-bold transition self-start sm:self-center"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Reset Log</span>
@@ -711,9 +894,12 @@ function App() {
                       <th className="p-4">Date/Time</th>
                       <th className="p-4">Game Mode</th>
                       <th className="p-4">Difficulty</th>
+                                <th className="p-4">Direction</th>
                       <th className="p-4">Item Tested</th>
                       <th className="p-4">Your Guess</th>
+                      <th className="p-4 text-center">Time</th>
                       <th className="p-4 text-center">Result</th>
+                                <th className="p-4 text-center">Sync</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -729,8 +915,20 @@ function App() {
                             {item.difficulty}
                           </span>
                         </td>
+                        <td className="p-4">
+                          {item.intervalDirection ? (
+                            <span className="capitalize text-[11px] text-slate-400 font-bold">
+                              {item.intervalDirection.replace(/-/g, ' ')}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
                         <td className="p-4 font-bold text-cyan-400">{item.correctAnswer}</td>
                         <td className="p-4 text-slate-400">{item.userGuess}</td>
+                        <td className="p-4 text-center text-slate-400 font-mono">
+                          {item.responseTimeMs !== undefined ? `${(item.responseTimeMs / 1000).toFixed(1)}s` : '—'}
+                        </td>
                         <td className="p-4 text-center">
                           {item.correct ? (
                             <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded text-[10px] font-bold border border-emerald-500/20 uppercase tracking-wider">
@@ -739,6 +937,23 @@ function App() {
                           ) : (
                             <span className="bg-rose-500/10 text-rose-400 px-2 py-1 rounded text-[10px] font-bold border border-rose-500/20 uppercase tracking-wider">
                               Fail
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">
+                          {user ? (
+                            item.synced ? (
+                              <span className="text-emerald-500 inline-flex items-center" title="Synced to Cloud">
+                                <CheckCircle2 className="h-4 w-4" />
+                              </span>
+                            ) : (
+                              <span className="text-amber-500 inline-flex items-center" title="Pending Sync">
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-slate-600 inline-flex items-center" title="Local Only (Guest)">
+                              <CloudOff className="h-4 w-4" />
                             </span>
                           )}
                         </td>
@@ -759,6 +974,11 @@ function App() {
             )}
           </div>
         )}
+
+              {/* TAB 4: MNEMONICS LIBRARY */}
+              {activeTab === 'mnemonics' && (
+                <MnemonicsLibrary />
+              )}
           </>
         )}
       </main>

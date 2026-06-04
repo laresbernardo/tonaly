@@ -8,7 +8,7 @@ import {
 } from '../lib/music-theory/intervals';
 import { pianoSynth } from '../lib/music-theory/piano-synth';
 import { db, auth } from '../services/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
 
 export interface HistoryItem {
   id: string;
@@ -19,6 +19,9 @@ export interface HistoryItem {
   correctAnswer: string;
   userGuess: string;
   item: string; // Note name or Interval name
+  synced?: boolean;
+  intervalDirection?: 'low-to-high' | 'high-to-low';
+  responseTimeMs?: number;
 }
 
 interface TheoryStore {
@@ -27,18 +30,23 @@ interface TheoryStore {
   customNotes: string[];
   customIntervals: string[];
   logResults: boolean;
+  intervalDirection: 'low-to-high' | 'high-to-low';
   testActive: boolean;
   currentTest: {
     baseNote: string;
     targetNote: string | null;
     correctAnswer: string;
     playSequence: string[];
+    playedAt?: number;
   } | null;
   userGuess: string | null;
   isCorrect: boolean | null;
   hasAnswered: boolean;
   history: HistoryItem[];
   loadingHistory: boolean;
+  historyUnsubscribe: (() => void) | null;
+  mnemonics: Record<string, string[]>;
+  loadingMnemonics: boolean;
 
   // Actions
   setGameMode: (mode: 'Note Identification' | 'Interval Identification') => void;
@@ -46,12 +54,15 @@ interface TheoryStore {
   setCustomNotes: (notes: string[]) => void;
   setCustomIntervals: (intervals: string[]) => void;
   setLogResults: (log: boolean) => void;
+  setIntervalDirection: (direction: 'low-to-high' | 'high-to-low') => void;
   generateNewTest: () => void;
   rehearTest: () => void;
   submitGuess: (guess: string) => Promise<void>;
   loadHistory: (userId: string | null) => Promise<void>;
-  clearHistory: () => void;
+  clearHistory: () => Promise<void>;
   deleteHistoryItem: (itemId: string) => Promise<void>;
+  setMnemonic: (item: string, text: string[]) => Promise<void>;
+  loadMnemonics: (userId: string | null) => Promise<void>;
 }
 
 // Note lists helper for matching R Shiny logic
@@ -65,6 +76,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   customNotes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'],
   customIntervals: ['Unison', 'Major 3rd', 'Perfect 5th', 'Octave'],
   logResults: true,
+  intervalDirection: 'low-to-high',
   testActive: false,
   currentTest: null,
   userGuess: null,
@@ -72,6 +84,9 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   hasAnswered: false,
   history: [],
   loadingHistory: false,
+  historyUnsubscribe: null,
+  mnemonics: {},
+  loadingMnemonics: false,
 
   setGameMode: (gameMode) => set({ gameMode, currentTest: null, testActive: false, hasAnswered: false, isCorrect: null }),
   
@@ -83,8 +98,10 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   
   setLogResults: (logResults) => set({ logResults }),
 
+  setIntervalDirection: (intervalDirection) => set({ intervalDirection }),
+
   generateNewTest: () => {
-    const { gameMode, difficulty, customNotes, customIntervals } = get();
+    const { gameMode, difficulty, customNotes, customIntervals, intervalDirection } = get();
     
     // 1. Determine Note Pool
     let notePool: string[] = [];
@@ -102,7 +119,8 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
         baseNote,
         targetNote: null,
         correctAnswer: baseNote,
-        playSequence: [baseNote]
+        playSequence: [baseNote],
+        playedAt: Date.now()
       };
 
       set({
@@ -133,7 +151,10 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
 
       // Pick random interval
       const randomSemitone = semitoneOptions[Math.floor(Math.random() * semitoneOptions.length)];
-      const targetNote = getNoteFromSemitones(baseNote, randomSemitone);
+      const targetNote = getNoteFromSemitones(
+        baseNote,
+        intervalDirection === 'high-to-low' ? -randomSemitone : randomSemitone
+      );
       const intervalDef = getIntervalBySemitones(randomSemitone);
 
       if (!targetNote || !intervalDef) {
@@ -146,7 +167,8 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
         baseNote,
         targetNote,
         correctAnswer: intervalDef.name,
-        playSequence: [baseNote, targetNote]
+        playSequence: [baseNote, targetNote],
+        playedAt: Date.now()
       };
 
       set({
@@ -174,10 +196,11 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   },
 
   submitGuess: async (guess) => {
-    const { currentTest, gameMode, difficulty, logResults, history } = get();
+    const { currentTest, gameMode, difficulty, logResults, history, intervalDirection } = get();
     if (!currentTest || get().hasAnswered) return;
 
     const isCorrectAnswer = guess === currentTest.correctAnswer;
+    const responseTimeMs = currentTest.playedAt ? Date.now() - currentTest.playedAt : undefined;
     
     const newHistoryItem: Omit<HistoryItem, 'id'> = {
       timestamp: Date.now(),
@@ -186,7 +209,9 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
       correct: isCorrectAnswer,
       correctAnswer: currentTest.correctAnswer,
       userGuess: guess,
-      item: currentTest.correctAnswer
+      item: currentTest.correctAnswer,
+      ...(gameMode === 'Interval Identification' ? { intervalDirection } : {}),
+      ...(responseTimeMs !== undefined ? { responseTimeMs } : {})
     };
 
     set({
@@ -197,56 +222,94 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
 
     // Optionally log to History
     if (logResults) {
-      const localId = `local_${Date.now()}`;
-      const fullHistoryItem: HistoryItem = { ...newHistoryItem, id: localId };
-
-      // Update state immediately for instant responsiveness
-      set({ history: [fullHistoryItem, ...history] });
-
-      // Sync to Firestore if user is signed in and online
       const currentUser = auth.currentUser;
       if (currentUser) {
         try {
-          const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'history'), newHistoryItem);
-          // Replace local temporary ID with real Firestore ID
-          set(state => ({
-            history: state.history.map(item => item.id === localId ? { ...item, id: docRef.id } : item)
-          }));
+          await addDoc(collection(db, 'users', currentUser.uid, 'history'), newHistoryItem);
         } catch (e) {
           console.warn('Firestore logging failed, saved locally:', e);
         }
+      } else {
+        const localId = `local_${Date.now()}`;
+        const fullHistoryItem: HistoryItem = { ...newHistoryItem, id: localId, synced: false };
+        set({ history: [fullHistoryItem, ...history] });
       }
     }
   },
 
   loadHistory: async (userId) => {
+    // If there is an existing unsubscribe function, call it first
+    const existingUnsubscribe = get().historyUnsubscribe;
+    if (existingUnsubscribe) {
+      existingUnsubscribe();
+      set({ historyUnsubscribe: null });
+    }
+
     set({ loadingHistory: true });
     
     if (userId) {
       try {
+        // Run migration query once to fix any missing interval directions or responseTimeMs in Firestore
+        const { getDocs, writeBatch } = await import('firebase/firestore');
+        const migrationQuery = query(
+          collection(db, 'users', userId, 'history')
+        );
+        const migrationSnap = await getDocs(migrationQuery);
+        const batch = writeBatch(db);
+        let hasUpdates = false;
+        migrationSnap.forEach((document) => {
+          const data = document.data();
+          const updates: Record<string, any> = {};
+
+          if (data.gameMode === 'Interval Identification' && !data.intervalDirection) {
+            updates.intervalDirection = 'low-to-high';
+          }
+          if (data.responseTimeMs === undefined) {
+            updates.responseTimeMs = 3000;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            batch.update(document.ref, updates);
+            hasUpdates = true;
+          }
+        });
+        if (hasUpdates) {
+          await batch.commit();
+        }
+
         const q = query(
           collection(db, 'users', userId, 'history'),
           orderBy('timestamp', 'desc'),
           limit(100)
         );
-        const snap = await getDocs(q);
-        const fetched: HistoryItem[] = [];
-        snap.forEach((doc) => {
-          const data = doc.data();
-          fetched.push({
-            id: doc.id,
-            timestamp: data.timestamp,
-            gameMode: data.gameMode,
-            difficulty: data.difficulty,
-            correct: data.correct,
-            correctAnswer: data.correctAnswer,
-            userGuess: data.userGuess,
-            item: data.item
+        
+        const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
+          const fetched: HistoryItem[] = [];
+          snap.forEach((document) => {
+            const data = document.data();
+            fetched.push({
+              id: document.id,
+              timestamp: data.timestamp,
+              gameMode: data.gameMode,
+              difficulty: data.difficulty,
+              correct: data.correct,
+              correctAnswer: data.correctAnswer,
+              userGuess: data.userGuess,
+              item: data.item,
+              intervalDirection: data.intervalDirection || (data.gameMode === 'Interval Identification' ? 'low-to-high' : undefined),
+              responseTimeMs: data.responseTimeMs,
+              synced: !document.metadata.hasPendingWrites
+            });
           });
+          set({ history: fetched, loadingHistory: false });
+        }, (error) => {
+          console.error('Failed to listen to Firestore history:', error);
+          set({ loadingHistory: false });
         });
-        set({ history: fetched, loadingHistory: false });
+
+        set({ historyUnsubscribe: unsubscribe });
       } catch (e) {
-        console.error('Failed to fetch Firestore history:', e);
+        console.error('Failed to set up Firestore history listener/migration:', e);
         set({ history: [], loadingHistory: false });
       }
     } else {
@@ -255,8 +318,24 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
     }
   },
 
-  clearHistory: () => {
+  clearHistory: async () => {
+    const { history } = get();
     set({ history: [] });
+
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        const promises = history.map(item => {
+          if (!item.id.startsWith('local_')) {
+            return deleteDoc(doc(db, 'users', currentUser.uid, 'history', item.id));
+          }
+          return Promise.resolve();
+        });
+        await Promise.all(promises);
+      } catch (e) {
+        console.error('Failed to clear Firestore history:', e);
+      }
+    }
   },
 
   deleteHistoryItem: async (itemId) => {
@@ -273,6 +352,55 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
       } catch (e) {
         console.error('Failed to delete Firestore log:', e);
       }
+    }
+  },
+
+  setMnemonic: async (item: string, text: string[]) => {
+    const { mnemonics } = get();
+    // Cap at 5 references
+    const cappedText = text.slice(0, 5);
+    const newMnemonics = { ...mnemonics, [item]: cappedText };
+    set({ mnemonics: newMnemonics });
+
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        const { setDoc } = await import('firebase/firestore');
+        await setDoc(doc(db, 'users', currentUser.uid, 'preferences', 'mnemonics'), newMnemonics, { merge: true });
+      } catch (e) {
+        console.warn('Failed to save mnemonic to Firestore:', e);
+      }
+    }
+  },
+
+  loadMnemonics: async (userId) => {
+    set({ loadingMnemonics: true });
+    if (userId) {
+      try {
+        const { getDoc } = await import('firebase/firestore');
+        const docSnap = await getDoc(doc(db, 'users', userId, 'preferences', 'mnemonics'));
+        if (docSnap.exists()) {
+          const rawData = docSnap.data() as Record<string, string | string[]>;
+          // Migrate any string values to array format
+          const migratedData: Record<string, string[]> = {};
+          Object.keys(rawData).forEach((key) => {
+            const val = rawData[key];
+            if (typeof val === 'string') {
+              migratedData[key] = [val];
+            } else if (Array.isArray(val)) {
+              migratedData[key] = val;
+            }
+          });
+          set({ mnemonics: migratedData, loadingMnemonics: false });
+        } else {
+          set({ mnemonics: {}, loadingMnemonics: false });
+        }
+      } catch (e) {
+        console.error('Failed to load mnemonics:', e);
+        set({ mnemonics: {}, loadingMnemonics: false });
+      }
+    } else {
+      set({ mnemonics: {}, loadingMnemonics: false });
     }
   }
 }));
