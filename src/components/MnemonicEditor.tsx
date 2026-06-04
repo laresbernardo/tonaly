@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTheoryStore } from '../store/useTheoryStore';
 import { getMnemonicWithDefault, DEFAULT_REFERENCES } from '../lib/music-theory/default-references';
-import { Music, Plus, X, RotateCcw } from 'lucide-react';
+import { Music, Plus, X, RotateCcw, Lightbulb } from 'lucide-react';
 
 interface MnemonicEditorProps {
   itemName: string;
   center?: boolean;
+  defaultOpen?: boolean;
 }
 
-export default function MnemonicEditor({ itemName, center = false }: MnemonicEditorProps) {
+export default function MnemonicEditor({ itemName, center = false, defaultOpen = false }: MnemonicEditorProps) {
   const { mnemonics, setMnemonic } = useTheoryStore();
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isAdding, setIsAdding] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -45,10 +47,24 @@ export default function MnemonicEditor({ itemName, center = false }: MnemonicEdi
     if (e.key === 'Escape') setIsAdding(false);
   };
 
+  if (!isOpen) {
+    return (
+      <div className={`flex justify-center ${center ? '' : 'sm:justify-start'} animate-fadeIn`}>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="inline-flex items-center space-x-1.5 text-xs text-purple-400 hover:text-purple-300 transition px-3.5 py-1.5 rounded-xl bg-purple-950/15 border border-purple-500/20 hover:bg-purple-950/25 cursor-pointer"
+        >
+          <Lightbulb className="h-3.5 w-3.5" />
+          <span>Show Mnemonics {activeReferences.length > 0 ? `(${activeReferences.length})` : ''}</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 w-full max-w-md mx-auto">
       {/* Tags List */}
-      <div className={`flex flex-wrap gap-1.5 items-center justify-center ${center ? '' : 'sm:justify-start'}`}>
+      <div className={`flex flex-wrap gap-1.5 items-center justify-center ${center ? '' : 'sm:justify-start'} animate-fadeIn`}>
         {activeReferences.map((ref, idx) => (
           <span 
             key={idx} 
@@ -90,6 +106,17 @@ export default function MnemonicEditor({ itemName, center = false }: MnemonicEdi
           >
             <RotateCcw className="h-3 w-3" />
             <span>Reset</span>
+          </button>
+        )}
+
+        {/* Collapse Button */}
+        {!defaultOpen && (
+          <button
+            onClick={() => setIsOpen(false)}
+            className="inline-flex items-center space-x-1 text-[11px] text-slate-500 hover:text-slate-400 transition cursor-pointer ml-2"
+            title="Hide references"
+          >
+            <span>Hide</span>
           </button>
         )}
       </div>

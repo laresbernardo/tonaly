@@ -373,7 +373,7 @@ function App() {
         </svg>
       </div>
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-50 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+      <header className="glass-panel sticky top-0 z-50 px-3 sm:px-6 py-2 sm:py-4 flex items-center justify-between">
         <div 
           onClick={handleLogoClick} 
           className="flex items-center space-x-3 cursor-pointer group select-none"
@@ -467,7 +467,7 @@ function App() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 flex-grow">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8 flex-grow">
         {!inStudio ? (
           <LandingPage
             onPlayAsGuest={() => setInStudio(true)}
@@ -477,7 +477,7 @@ function App() {
         ) : (
           <>
             {/* Mobile Tab Selectors */}
-            <div className="flex md:hidden items-center justify-center bg-slate-900 p-1 rounded-xl border border-slate-800 mb-6">
+            <div className="flex md:hidden items-center justify-center bg-slate-900 p-1 rounded-xl border border-slate-800 mb-4">
               <button
                 onClick={() => setActiveTab('training')}
                 className={`flex-1 py-2 rounded-lg text-[10px] font-black transition uppercase tracking-wider text-center ${activeTab === 'training' ? 'bg-cyan-600 text-white' : 'text-slate-400'
@@ -529,10 +529,10 @@ function App() {
 
         {/* TAB 1: PRACTICE ARENA */}
         {activeTab === 'training' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
 
             {/* LEFT SIDEBAR: SETTINGS & CONFIG */}
-            <div className="lg:col-span-4 space-y-6">
+            <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
                     <div className="glass-panel p-6 rounded-3xl border border-slate-800/60">
 
                 {/* Game Mode Select */}
@@ -695,11 +695,11 @@ function App() {
             </div>
 
             {/* CENTER COLUMN: THE TRAINING ARENA */}
-            <div className="lg:col-span-8 space-y-6">
-              <div className="glass-panel p-6 rounded-3xl border border-slate-800/60 flex flex-col justify-between">
+            <div className="lg:col-span-8 space-y-6 order-1 lg:order-2">
+              <div className="glass-panel p-4 sm:p-6 rounded-3xl border border-slate-800/60 flex flex-col justify-between">
 
                 {/* Arena Header Controls */}
-                      <div className="flex items-center justify-end pb-4 border-b border-slate-800/60 mb-4">
+                      <div className="flex items-center justify-end pb-2 sm:pb-3 border-b border-slate-800/60 mb-2 sm:mb-3">
                   <div className="flex space-x-2">
                           {testActive && !hasAnswered && allRefsForCurrentTest.length > 0 && revealedHints.length < allRefsForCurrentTest.length && (
                             <button
@@ -730,7 +730,7 @@ function App() {
 
                 {/* Large Visual Stage */}
                       <div
-                        className={`min-h-[180px] flex flex-col items-center justify-center text-center p-6 sm:p-8 rounded-3xl border transition-all duration-500 my-4 select-none ${!testActive
+                        className={`min-h-[130px] sm:min-h-[180px] flex flex-col items-center justify-center text-center p-4 sm:p-8 rounded-3xl border transition-all duration-500 mt-1 mb-3 sm:mt-2 sm:mb-4 select-none ${!testActive
                             ? 'bg-slate-950/40 border-slate-900/80 text-slate-500'
                             : hasAnswered
                               ? isCorrect
@@ -795,7 +795,7 @@ function App() {
                                     )}
 
                                     <div className="w-full mt-2">
-                                      <MnemonicEditor itemName={currentTest?.correctAnswer || ''} center={true} />
+                                      <MnemonicEditor key={currentTest?.correctAnswer || ''} itemName={currentTest?.correctAnswer || ''} center={true} />
                                     </div>
                                   </div>
                         </div>

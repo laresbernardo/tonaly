@@ -28,7 +28,7 @@ export default function MnemonicsLibrary() {
             {commonIntervals.map(interval => (
               <div key={interval} className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800">
                 <div className="font-bold text-cyan-300 text-sm mb-2">{interval}</div>
-                <MnemonicEditor itemName={interval} />
+                <MnemonicEditor itemName={interval} defaultOpen={true} />
               </div>
             ))}
           </div>
@@ -43,7 +43,7 @@ export default function MnemonicsLibrary() {
             {commonNotes.map(note => (
               <div key={note} className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800">
                 <div className="font-bold text-cyan-300 text-sm mb-2">{note}</div>
-                <MnemonicEditor itemName={note} />
+                <MnemonicEditor itemName={note} defaultOpen={true} />
               </div>
             ))}
           </div>
