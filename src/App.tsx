@@ -102,7 +102,8 @@ function App() {
     clearHistory,
     deleteHistoryItem,
     mnemonics,
-    loadMnemonics
+    loadMnemonics,
+    loadSettings
   } = useTheoryStore();
 
   const [showCustomConfig, setShowCustomConfig] = useState(false);
@@ -143,6 +144,7 @@ function App() {
       setLoading(false);
       loadHistory(currentUser ? currentUser.uid : null);
       loadMnemonics(currentUser ? currentUser.uid : null);
+      loadSettings(currentUser ? currentUser.uid : null);
       if (currentUser) {
         setInStudio(true);
       }
@@ -151,7 +153,43 @@ function App() {
     return () => {
       unsubscribe();
     };
-  }, [loadHistory]);
+  }, [loadHistory, loadMnemonics, loadSettings]);
+
+  // One-time migration to set up the user's custom mnemonics as shown in the screenshot
+  useEffect(() => {
+    if (user) {
+      const runMigration = async () => {
+        const flag = localStorage.getItem('tonaly_mnemonics_migration_v1');
+        if (!flag) {
+          try {
+            console.log('Running mnemonics setup migration...');
+            const data = {
+              "Unison": ["Happy Birthday (first 2 notes)", "Same pitch"],
+              "Minor 2nd": ["Jaws Theme", "Für Elise (first 2 notes)", "Pink Panther"],
+              "Major 2nd": ["Happy Birthday (2nd to 3rd note)", "Silent Night (first 2 notes)", "Frère Jacques", "Do-Re"],
+              "Minor 3rd": ["Hey Jude", "La Perica", "Romeo & Julieta"],
+              "Major 3rd": ["Kumbaya", "Blue Danube", "Maiquetia: su atencion por favor"],
+              "Perfect 4th": ["Amazing Grace", "Harry Potter Theme", "Tango final", "Cambur pinton", "Trumpet announcement"],
+              "Tritone (Diminished 5th)": ["The Simpsons Theme", "Maria (West Side Story)", "Dune chant"],
+              "Perfect 5th": ["Star Wars Theme", "Twinkle Twinkle Little Star", "Wise Men", "Forest Gump Theme"],
+              "Minor 6th": ["The Entertainer (Scott Joplin)", "Love Story Theme", "We Are Young (Fun. chorus)"]
+            };
+            
+            // Set each mnemonic in the store (which syncs it to Firestore)
+            for (const [key, value] of Object.entries(data)) {
+              await useTheoryStore.getState().setMnemonic(key, value);
+            }
+            
+            localStorage.setItem('tonaly_mnemonics_migration_v1', 'done');
+            console.log('Mnemonics setup migration completed successfully!');
+          } catch (e) {
+            console.error('Mnemonics setup migration failed:', e);
+          }
+        }
+      };
+      runMigration();
+    }
+  }, [user]);
 
   const handleSignIn = async () => {
     try {

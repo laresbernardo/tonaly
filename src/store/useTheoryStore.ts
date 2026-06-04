@@ -63,6 +63,8 @@ interface TheoryStore {
   deleteHistoryItem: (itemId: string) => Promise<void>;
   setMnemonic: (item: string, text: string[]) => Promise<void>;
   loadMnemonics: (userId: string | null) => Promise<void>;
+  saveSettings: () => Promise<void>;
+  loadSettings: (userId: string | null) => Promise<void>;
 }
 
 // Note lists helper for matching R Shiny logic
@@ -88,17 +90,35 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   mnemonics: {},
   loadingMnemonics: false,
 
-  setGameMode: (gameMode) => set({ gameMode, currentTest: null, testActive: false, hasAnswered: false, isCorrect: null }),
+  setGameMode: (gameMode) => {
+    set({ gameMode, currentTest: null, testActive: false, hasAnswered: false, isCorrect: null });
+    get().saveSettings();
+  },
   
-  setDifficulty: (difficulty) => set({ difficulty, currentTest: null, testActive: false, hasAnswered: false, isCorrect: null }),
+  setDifficulty: (difficulty) => {
+    set({ difficulty, currentTest: null, testActive: false, hasAnswered: false, isCorrect: null });
+    get().saveSettings();
+  },
   
-  setCustomNotes: (customNotes) => set({ customNotes }),
+  setCustomNotes: (customNotes) => {
+    set({ customNotes });
+    get().saveSettings();
+  },
   
-  setCustomIntervals: (customIntervals) => set({ customIntervals }),
+  setCustomIntervals: (customIntervals) => {
+    set({ customIntervals });
+    get().saveSettings();
+  },
   
-  setLogResults: (logResults) => set({ logResults }),
+  setLogResults: (logResults) => {
+    set({ logResults });
+    get().saveSettings();
+  },
 
-  setIntervalDirection: (intervalDirection) => set({ intervalDirection }),
+  setIntervalDirection: (intervalDirection) => {
+    set({ intervalDirection });
+    get().saveSettings();
+  },
 
   generateNewTest: () => {
     const { gameMode, difficulty, customNotes, customIntervals, intervalDirection } = get();
@@ -377,30 +397,85 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
     set({ loadingMnemonics: true });
     if (userId) {
       try {
-        const { getDoc } = await import('firebase/firestore');
+        const { getDoc, setDoc } = await import('firebase/firestore');
         const docSnap = await getDoc(doc(db, 'users', userId, 'preferences', 'mnemonics'));
+        const localMnemonics = get().mnemonics;
+        
+        let cloudMnemonics: Record<string, string[]> = {};
         if (docSnap.exists()) {
           const rawData = docSnap.data() as Record<string, string | string[]>;
           // Migrate any string values to array format
-          const migratedData: Record<string, string[]> = {};
           Object.keys(rawData).forEach((key) => {
             const val = rawData[key];
             if (typeof val === 'string') {
-              migratedData[key] = [val];
+              cloudMnemonics[key] = [val];
             } else if (Array.isArray(val)) {
-              migratedData[key] = val;
+              cloudMnemonics[key] = val;
             }
           });
-          set({ mnemonics: migratedData, loadingMnemonics: false });
-        } else {
-          set({ mnemonics: {}, loadingMnemonics: false });
+        }
+
+        // Merge: local mnemonics + cloud mnemonics (cloud values win on collision)
+        const mergedMnemonics = { ...localMnemonics, ...cloudMnemonics };
+        set({ mnemonics: mergedMnemonics, loadingMnemonics: false });
+
+        // If local mnemonics had unique items, save merged back to cloud
+        const hasNewLocalItems = Object.keys(localMnemonics).some(
+          key => !cloudMnemonics[key] || JSON.stringify(localMnemonics[key]) !== JSON.stringify(cloudMnemonics[key])
+        );
+        if (hasNewLocalItems) {
+          await setDoc(doc(db, 'users', userId, 'preferences', 'mnemonics'), mergedMnemonics, { merge: true });
         }
       } catch (e) {
         console.error('Failed to load mnemonics:', e);
-        set({ mnemonics: {}, loadingMnemonics: false });
+        set({ loadingMnemonics: false });
       }
     } else {
       set({ mnemonics: {}, loadingMnemonics: false });
+    }
+  },
+
+  saveSettings: async () => {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const { gameMode, difficulty, customNotes, customIntervals, intervalDirection, logResults } = get();
+      try {
+        const { setDoc } = await import('firebase/firestore');
+        await setDoc(doc(db, 'users', currentUser.uid, 'preferences', 'settings'), {
+          gameMode,
+          difficulty,
+          customNotes,
+          customIntervals,
+          intervalDirection,
+          logResults
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Failed to save settings to Firestore:', e);
+      }
+    }
+  },
+
+  loadSettings: async (userId) => {
+    if (userId) {
+      try {
+        const { getDoc } = await import('firebase/firestore');
+        const docSnap = await getDoc(doc(db, 'users', userId, 'preferences', 'settings'));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          set({
+            gameMode: data.gameMode ?? get().gameMode,
+            difficulty: data.difficulty ?? get().difficulty,
+            customNotes: data.customNotes ?? get().customNotes,
+            customIntervals: data.customIntervals ?? get().customIntervals,
+            intervalDirection: data.intervalDirection ?? get().intervalDirection,
+            logResults: data.logResults ?? get().logResults,
+          });
+        } else {
+          get().saveSettings();
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e);
+      }
     }
   }
 }));
