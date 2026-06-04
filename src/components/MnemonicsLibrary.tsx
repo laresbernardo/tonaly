@@ -16,9 +16,6 @@ export default function MnemonicsLibrary() {
           <BookOpen className="h-5 w-5 text-purple-400" />
           <h2 className="text-lg font-black text-white">Sonic Mnemonics</h2>
         </div>
-        <div className="text-xs text-slate-400">
-          Your personal reference dictionary
-        </div>
       </div>
 
       <div className="space-y-8">

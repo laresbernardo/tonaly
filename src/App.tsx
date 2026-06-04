@@ -18,7 +18,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Check,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { signInWithGoogle, logout, auth } from './services/firebase';
 import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
@@ -52,6 +53,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history' | 'mnemonics'>('training');
   const [inStudio, setInStudio] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -812,9 +814,6 @@ function App() {
                 <Trophy className="h-5 w-5 text-cyan-400" />
                 <span>Performance Insights</span>
               </h2>
-              <div className="text-xs text-slate-400">
-                Logged practice sessions aggregated in real time
-              </div>
             </div>
 
             <AnalyticsDashboard history={resultsHistory} />
@@ -824,59 +823,58 @@ function App() {
         {/* TAB 3: SESSION LOG TABLE */}
         {activeTab === 'history' && (
           <div className="glass-panel p-6 rounded-3xl border border-slate-800/60">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-4 mb-6">
-                    <div className="flex flex-col md:flex-row md:items-center gap-3">
-                      <h2 className="text-lg font-black text-white flex items-center space-x-2">
-                        <History className="h-5 w-5 text-cyan-400" />
-                        <span>Session Log History</span>
-                      </h2>
+                    <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 pb-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-black text-white flex items-center space-x-2">
+                          <History className="h-5 w-5 text-cyan-400" />
+                          <span>History</span>
+                        </h2>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${isOnline
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                            : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                          }`}>
-                          {isOnline ? (
-                            <>
-                              <Wifi className="h-3 w-3 mr-0.5" />
-                              <span>Online</span>
-                            </>
-                          ) : (
-                            <>
-                              <WifiOff className="h-3 w-3 mr-0.5" />
-                              <span>Offline</span>
-                            </>
-                          )}
-                        </span>
-
-                        {user ? (
-                          pendingSyncCount > 0 ? (
-                            <span className="inline-flex items-center space-x-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse">
-                              <RefreshCw className="h-3 w-3 mr-0.5 animate-spin" />
-                              <span>Syncing ({pendingSyncCount} pending)</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center space-x-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                              <Cloud className="h-3 w-3 mr-0.5" />
-                              <span>Cloud Synced</span>
-                            </span>
-                          )
-                        ) : (
-                          <span className="inline-flex items-center space-x-1 bg-slate-800 border border-slate-700/60 text-slate-400 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                            <CloudOff className="h-3 w-3 mr-0.5" />
-                            <span>Guest Mode (Local)</span>
+                        <div className="flex items-center gap-2">
+                          <span 
+                            title={isOnline ? 'Online' : 'Offline'}
+                            className={`inline-flex items-center justify-center p-1.5 rounded-lg border ${isOnline
+                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                            }`}
+                          >
+                            {isOnline ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
                           </span>
-                        )}
+
+                          {user ? (
+                            pendingSyncCount > 0 ? (
+                              <span 
+                                title={`Syncing (${pendingSyncCount} pending)`}
+                                className="inline-flex items-center justify-center bg-amber-500/10 border border-amber-500/20 text-amber-400 p-1.5 rounded-lg animate-pulse"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              </span>
+                            ) : (
+                              <span 
+                                title="Cloud Synced"
+                                className="inline-flex items-center justify-center bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 p-1.5 rounded-lg"
+                              >
+                                <Cloud className="h-3.5 w-3.5" />
+                              </span>
+                            )
+                          ) : (
+                            <span 
+                              title="Guest Mode (Local Only)"
+                              className="inline-flex items-center justify-center bg-slate-800 border border-slate-700/60 text-slate-400 p-1.5 rounded-lg"
+                            >
+                              <CloudOff className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <button
+                        onClick={() => setShowResetConfirm(true)}
+                        title="Reset Log"
+                        className="flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 p-2 rounded-lg transition self-center"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </button>
                     </div>
-              <button
-                onClick={clearHistory}
-                      className="flex items-center space-x-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs px-3.5 py-2 rounded-lg font-bold transition self-start sm:self-center"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset Log</span>
-              </button>
-            </div>
 
             {loadingHistory ? (
               <div className="py-20 text-center text-slate-400 text-sm">
@@ -991,6 +989,43 @@ function App() {
           </p>
         </div>
       </footer>
+      {/* Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="glass-panel max-w-md w-full p-6 rounded-3xl border border-slate-800/80 shadow-2xl relative overflow-hidden animate-scaleIn">
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-rose-500 to-amber-500" />
+            
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="bg-rose-500/10 p-2 rounded-xl border border-rose-500/20 text-rose-400">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-black text-white">Reset Log History?</h3>
+            </div>
+
+            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+              You are about to delete <span className="text-rose-400 font-bold font-mono">{resultsHistory.length}</span> practice log{resultsHistory.length === 1 ? '' : 's'}. This action is permanent and cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-900/50 hover:bg-slate-900 border border-slate-800/60 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  clearHistory();
+                  setShowResetConfirm(false);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-950/40 transition"
+              >
+                Delete Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
