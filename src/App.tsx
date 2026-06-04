@@ -48,14 +48,21 @@ const formatDate = (timestamp: number) => {
 
 const getTabFromUrl = (): 'training' | 'analytics' | 'history' | 'mnemonics' => {
   if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'arena') return 'training';
-    if (tab === 'insights') return 'analytics';
-    if (tab === 'data') return 'history';
-    if (tab === 'mnemonics') return 'mnemonics';
+    const path = window.location.pathname;
+    if (path === '/arena') return 'training';
+    if (path === '/insights') return 'analytics';
+    if (path === '/data') return 'history';
+    if (path === '/mnemonics') return 'mnemonics';
   }
   return 'training';
+};
+
+const isInStudioPath = (): boolean => {
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname;
+    return ['/arena', '/insights', '/data', '/mnemonics'].includes(path);
+  }
+  return false;
 };
 
 function App() {
@@ -63,7 +70,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history' | 'mnemonics'>(getTabFromUrl);
-  const [inStudio, setInStudio] = useState(false);
+  const [inStudio, setInStudio] = useState(isInStudioPath);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -78,19 +85,22 @@ function App() {
     };
   }, []);
 
-  // Sync activeTab to URL search params
+  // Sync activeTab to URL pathname
   useEffect(() => {
-    if (typeof window !== 'undefined' && inStudio) {
-      const params = new URLSearchParams(window.location.search);
-      let urlValue = 'arena';
-      if (activeTab === 'analytics') urlValue = 'insights';
-      else if (activeTab === 'history') urlValue = 'data';
-      else if (activeTab === 'mnemonics') urlValue = 'mnemonics';
+    if (typeof window !== 'undefined') {
+      if (inStudio) {
+        let urlValue = '/arena';
+        if (activeTab === 'analytics') urlValue = '/insights';
+        else if (activeTab === 'history') urlValue = '/data';
+        else if (activeTab === 'mnemonics') urlValue = '/mnemonics';
 
-      if (params.get('tab') !== urlValue) {
-        params.set('tab', urlValue);
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        window.history.pushState({}, '', newUrl);
+        if (window.location.pathname !== urlValue) {
+          window.history.pushState({}, '', urlValue);
+        }
+      } else {
+        if (window.location.pathname !== '/') {
+          window.history.pushState({}, '', '/');
+        }
       }
     }
   }, [activeTab, inStudio]);
@@ -98,9 +108,13 @@ function App() {
   // Sync back from URL when browser back/forward buttons are clicked
   useEffect(() => {
     const handlePopState = () => {
-      const tab = getTabFromUrl();
-      if (tab !== activeTab) {
-        setActiveTab(tab);
+      const isStudio = isInStudioPath();
+      setInStudio(isStudio);
+      if (isStudio) {
+        const tab = getTabFromUrl();
+        if (tab !== activeTab) {
+          setActiveTab(tab);
+        }
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -109,10 +123,6 @@ function App() {
 
   const handleLogoClick = () => {
     setInStudio(false);
-    // Clear search params and hash from URL to show the main landing page URL cleanly
-    if (window.location.search || window.location.hash) {
-      window.history.pushState({}, '', window.location.pathname);
-    }
   };
 
   // Zustand Global Ear Training States
