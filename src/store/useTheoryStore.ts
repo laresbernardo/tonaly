@@ -8,7 +8,7 @@ import {
 } from '../lib/music-theory/intervals';
 import { pianoSynth } from '../lib/music-theory/piano-synth';
 import { db, auth } from '../services/firebase';
-import { collection, addDoc, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 
 export interface HistoryItem {
   id: string;
@@ -299,8 +299,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
 
         const q = query(
           collection(db, 'users', userId, 'history'),
-          orderBy('timestamp', 'desc'),
-          limit(100)
+          orderBy('timestamp', 'desc')
         );
         
         const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {

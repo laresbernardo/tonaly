@@ -46,11 +46,23 @@ const formatDate = (timestamp: number) => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
+const getTabFromUrl = (): 'training' | 'analytics' | 'history' | 'mnemonics' => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'arena') return 'training';
+    if (tab === 'insights') return 'analytics';
+    if (tab === 'data') return 'history';
+    if (tab === 'mnemonics') return 'mnemonics';
+  }
+  return 'training';
+};
+
 function App() {
   // Auth and environment state
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history' | 'mnemonics'>('training');
+  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'history' | 'mnemonics'>(getTabFromUrl);
   const [inStudio, setInStudio] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -65,6 +77,35 @@ function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Sync activeTab to URL search params
+  useEffect(() => {
+    if (typeof window !== 'undefined' && inStudio) {
+      const params = new URLSearchParams(window.location.search);
+      let urlValue = 'arena';
+      if (activeTab === 'analytics') urlValue = 'insights';
+      else if (activeTab === 'history') urlValue = 'data';
+      else if (activeTab === 'mnemonics') urlValue = 'mnemonics';
+
+      if (params.get('tab') !== urlValue) {
+        params.set('tab', urlValue);
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.pushState({}, '', newUrl);
+      }
+    }
+  }, [activeTab, inStudio]);
+
+  // Sync back from URL when browser back/forward buttons are clicked
+  useEffect(() => {
+    const handlePopState = () => {
+      const tab = getTabFromUrl();
+      if (tab !== activeTab) {
+        setActiveTab(tab);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeTab]);
 
   const handleLogoClick = () => {
     setInStudio(false);
@@ -940,7 +981,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-900 text-xs font-medium text-slate-300">
-                    {resultsHistory.map((item) => (
+                    {resultsHistory.slice(0, 100).map((item) => (
                       <tr key={item.id} className="hover:bg-slate-900/30 transition">
                         <td className="p-4 text-slate-400 font-mono whitespace-nowrap">
                           {formatDate(item.timestamp)}
