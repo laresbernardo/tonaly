@@ -50,6 +50,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
 
     // Apply time range filter
     if (timeRangeFilter !== 'ALL TIME') {
+      // eslint-disable-next-line react-hooks/purity
       const now = Date.now();
       let cutOff = 0;
       if (timeRangeFilter === '1D') cutOff = now - 24 * 60 * 60 * 1000;
@@ -134,28 +135,38 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
       return a.originalName.localeCompare(b.originalName);
     });
 
-    // Aggregate attempts over time (grouped by day, showing last 7 days with entries)
-    const dayMap: Record<string, { correct: number; total: number }> = {};
-    filteredHistory.slice(0, 30).forEach((h) => {
-      const dateStr = new Date(h.timestamp).toLocaleDateString(undefined, { 
+    // Aggregate attempts over time (grouped by day, showing last 10 days with entries)
+    const dayMap: Record<string, { correct: number; total: number; timestamp: number; dateStr: string }> = {};
+    filteredHistory.forEach((h) => {
+      const dateObj = new Date(h.timestamp);
+      const year = dateObj.getFullYear();
+      const month = dateObj.getMonth();
+      const day = dateObj.getDate();
+      const key = `${year}-${month + 1}-${day}`;
+
+      const dateStr = dateObj.toLocaleDateString(undefined, { 
         month: 'short', 
         day: 'numeric' 
       });
-      if (!dayMap[dateStr]) {
-        dayMap[dateStr] = { correct: 0, total: 0 };
+
+      if (!dayMap[key]) {
+        dayMap[key] = { correct: 0, total: 0, timestamp: h.timestamp, dateStr };
       }
-      dayMap[dateStr].total += 1;
+      dayMap[key].total += 1;
       if (h.correct) {
-        dayMap[dateStr].correct += 1;
+        dayMap[key].correct += 1;
       }
     });
 
-    const overTimeData = Object.entries(dayMap).map(([date, stats]) => ({
-      date: `${date} (${stats.total})`,
-      originalDate: date,
-      successRate: Math.round((stats.correct / stats.total) * 100),
-      attempts: stats.total
-    })).reverse(); // Show chronological order
+    const overTimeData = Object.values(dayMap)
+      .sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically (oldest first)
+      .slice(-10) // Show last 10 days of practice with entries
+      .map((d) => ({
+        date: `${d.dateStr} (${d.total})`,
+        originalDate: d.dateStr,
+        successRate: Math.round((d.correct / d.total) * 100),
+        attempts: d.total
+      }));
 
     // Calculate Best Streak
     let bestStreak = 0;
@@ -399,7 +410,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
                   labelStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
-                  formatter={(value: any) => [
+                  formatter={(value: number | string) => [
                     itemChartMetric === 'successRate' ? `${value}%` : `${value}s`,
                     itemChartMetric === 'successRate' ? 'Success Rate' : 'Avg Response Time'
                   ]}
