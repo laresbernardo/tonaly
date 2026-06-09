@@ -410,7 +410,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
                   labelStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
-                  formatter={(value: number | string) => [
+                  formatter={(value: any) => [
                     itemChartMetric === 'successRate' ? `${value}%` : `${value}s`,
                     itemChartMetric === 'successRate' ? 'Success Rate' : 'Avg Response Time'
                   ]}
