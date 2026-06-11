@@ -27,7 +27,7 @@ import type { User } from 'firebase/auth';
 import { useTheoryStore } from './store/useTheoryStore';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import LandingPage from './components/LandingPage';
-import { ALL_NOTES } from './lib/music-theory/notes';
+import { ALL_NOTES, convertNoteToNomenclature } from './lib/music-theory/notes';
 import { INTERVAL_MAP } from './lib/music-theory/intervals';
 import MnemonicEditor from './components/MnemonicEditor';
 import MnemonicsLibrary from './components/MnemonicsLibrary';
@@ -133,6 +133,7 @@ function App() {
     customIntervals,
     logResults,
     intervalDirection,
+    noteNomenclature,
     testActive,
     currentTest,
     userGuess,
@@ -146,9 +147,11 @@ function App() {
     setCustomIntervals,
     setLogResults,
     setIntervalDirection,
+    setNoteNomenclature,
     generateNewTest,
     rehearTest,
     submitGuess,
+    playOptionSound,
     loadHistory,
     clearHistory,
     deleteHistoryItem,
@@ -158,6 +161,18 @@ function App() {
   } = useTheoryStore();
 
   const [showCustomConfig, setShowCustomConfig] = useState(false);
+
+  const [insightsMode, setInsightsMode] = useState<'Note Identification' | 'Interval Identification'>('Interval Identification');
+
+  useEffect(() => {
+    if (gameMode) {
+      setInsightsMode(gameMode);
+    }
+  }, [gameMode]);
+
+  const filteredInsightsHistory = useMemo(() => {
+    return resultsHistory.filter(item => item.gameMode === insightsMode);
+  }, [resultsHistory, insightsMode]);
 
   const pendingSyncCount = useMemo(() => {
     if (!user) return 0;
@@ -623,7 +638,7 @@ function App() {
                                       : 'bg-slate-900 text-slate-400 border-slate-800/80'
                                       }`}
                                   >
-                                    {note}
+                                    {convertNoteToNomenclature(note, noteNomenclature)}
                                   </button>
                                 );
                               })}
@@ -685,6 +700,31 @@ function App() {
                           </div>
                         </div>
                       )}
+
+                {/* Note Nomenclature Select */}
+                <div className="space-y-3 mb-6 animate-fadeIn mt-6">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Note Nomenclature</label>
+                  <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <button
+                      onClick={() => setNoteNomenclature('scientific')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${noteNomenclature === 'scientific'
+                        ? 'bg-cyan-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                      Scientific (C4)
+                    </button>
+                    <button
+                      onClick={() => setNoteNomenclature('solfege')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${noteNomenclature === 'solfege'
+                        ? 'bg-cyan-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                      Solfège (Do4)
+                    </button>
+                  </div>
+                </div>
 
                       {/* Log results toggle */}
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-800/60">
@@ -784,7 +824,9 @@ function App() {
                                       {isCorrect ? 'You Nailed It' : 'Correct Answer'}
                                     </span>
                                     <h3 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-blue-500 tracking-tight">
-                                      {currentTest?.correctAnswer}
+                                      {gameMode === 'Note Identification' && currentTest?.correctAnswer
+                                        ? convertNoteToNomenclature(currentTest.correctAnswer, noteNomenclature)
+                                        : currentTest?.correctAnswer}
                                     </h3>
                                   </div>
 
@@ -792,15 +834,15 @@ function App() {
                                     {gameMode === 'Interval Identification' && currentTest && (
                                       <div className="inline-flex items-center gap-2 bg-slate-900/60 px-3 py-1 rounded-full border border-slate-800/80 text-[11px] text-slate-300 font-medium">
                                         <span className="text-slate-500">Played:</span>
-                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{currentTest.baseNote}</span>
+                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{convertNoteToNomenclature(currentTest.baseNote, noteNomenclature)}</span>
                                         <span className="text-slate-600">→</span>
-                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{currentTest.targetNote}</span>
+                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{convertNoteToNomenclature(currentTest.targetNote || '', noteNomenclature)}</span>
                                       </div>
                                     )}
                                     {gameMode === 'Note Identification' && currentTest && (
                                       <div className="inline-flex items-center gap-2 bg-slate-900/60 px-3 py-1 rounded-full border border-slate-800/80 text-[11px] text-slate-300 font-medium">
                                         <span className="text-slate-500">Played Note:</span>
-                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{currentTest.correctAnswer}</span>
+                                        <span className="font-bold text-cyan-400 font-mono bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/30">{convertNoteToNomenclature(currentTest.correctAnswer, noteNomenclature)}</span>
                                       </div>
                                     )}
 
@@ -862,26 +904,27 @@ function App() {
                         const correct = currentTest?.correctAnswer === option;
                         const wrong = selected && !correct;
 
-                        let btnClass = 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800/80 hover:border-slate-700';
+                        let btnClass = 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800/80 hover:border-slate-700 cursor-pointer';
 
                         if (hasAnswered) {
                           if (correct) {
-                            btnClass = 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-extrabold';
+                            btnClass = 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-extrabold cursor-pointer hover:bg-emerald-500/30 transition shadow-lg shadow-emerald-500/5';
                           } else if (wrong) {
-                            btnClass = 'bg-rose-500/20 border-rose-500 text-rose-400 font-extrabold';
+                            btnClass = 'bg-rose-500/20 border-rose-500 text-rose-400 font-extrabold cursor-pointer hover:bg-rose-500/30 transition shadow-lg shadow-rose-500/5';
                           } else {
-                            btnClass = 'bg-slate-950 text-slate-600 border-slate-900 cursor-not-allowed opacity-50';
+                            btnClass = 'bg-slate-950/40 text-slate-500 border-slate-900/80 cursor-pointer hover:bg-slate-900/40 hover:text-slate-300 hover:border-slate-800 transition';
                           }
                         }
 
                         return (
                           <button
                             key={option}
-                            disabled={hasAnswered}
-                            onClick={() => submitGuess(option)}
+                            onClick={() => hasAnswered ? playOptionSound(option) : submitGuess(option)}
                             className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition focus:outline-none capitalize text-center ${btnClass}`}
                           >
-                            {option}
+                            {gameMode === 'Note Identification'
+                              ? convertNoteToNomenclature(option, noteNomenclature)
+                              : option}
                           </button>
                         );
                       })}
@@ -898,14 +941,37 @@ function App() {
         {/* TAB 2: INSIGHTS DASHBOARD */}
         {activeTab === 'analytics' && (
           <div className="glass-panel p-6 rounded-3xl border border-slate-800/60">
-            <div className="flex items-center justify-between border-b border-slate-800/60 pb-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-4 mb-6">
               <h2 className="text-lg font-black text-white flex items-center space-x-2">
                 <Trophy className="h-5 w-5 text-cyan-400" />
                 <span>Performance Insights</span>
               </h2>
+              {/* Intervals / Notes toggle */}
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+                <button
+                  onClick={() => setInsightsMode('Interval Identification')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                    insightsMode === 'Interval Identification'
+                      ? 'bg-cyan-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Intervals
+                </button>
+                <button
+                  onClick={() => setInsightsMode('Note Identification')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                    insightsMode === 'Note Identification'
+                      ? 'bg-cyan-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Notes
+                </button>
+              </div>
             </div>
 
-            <AnalyticsDashboard history={resultsHistory} />
+            <AnalyticsDashboard history={filteredInsightsHistory} />
           </div>
         )}
 
@@ -1011,8 +1077,16 @@ function App() {
                             <span className="text-slate-600">—</span>
                           )}
                         </td>
-                        <td className="p-4 font-bold text-cyan-400">{item.correctAnswer}</td>
-                        <td className="p-4 text-slate-400">{item.userGuess}</td>
+                        <td className="p-4 font-bold text-cyan-400">
+                          {item.gameMode === 'Note Identification'
+                            ? convertNoteToNomenclature(item.correctAnswer, noteNomenclature)
+                            : item.correctAnswer}
+                        </td>
+                        <td className="p-4 text-slate-400">
+                          {item.gameMode === 'Note Identification'
+                            ? convertNoteToNomenclature(item.userGuess, noteNomenclature)
+                            : item.userGuess}
+                        </td>
                         <td className="p-4 text-center text-slate-400 font-mono">
                           {item.responseTimeMs !== undefined ? `${(item.responseTimeMs / 1000).toFixed(1)}s` : '—'}
                         </td>

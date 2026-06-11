@@ -19,7 +19,7 @@ export const SOLFEGE_MAP: Record<string, string> = {
   "F": "Fa",
   "G": "Sol",
   "A": "La",
-  "B": "Ti"
+  "B": "Si"
 };
 
 // Formatting function for note display
@@ -27,6 +27,18 @@ export const formatNoteName = (noteName: string): string => {
   const baseNote = noteName.replace(/[0-9#b]/g, ''); // extract letter
   const solfege = SOLFEGE_MAP[baseNote];
   return solfege ? `${noteName} (${solfege})` : noteName;
+};
+
+// Converts note names (like C#4) to selected nomenclature (like Do#4)
+export const convertNoteToNomenclature = (noteName: string, nomenclature: 'scientific' | 'solfege'): string => {
+  if (nomenclature === 'scientific' || !noteName) return noteName;
+
+  const match = noteName.match(/^([A-G])([#b]?)([0-9]?)$/);
+  if (!match) return noteName;
+  const [, letter, accidental, octave] = match;
+
+  const solfegeLetter = SOLFEGE_MAP[letter] || letter;
+  return `${solfegeLetter}${accidental}${octave}`;
 };
 
 // Filter notes by octave selector helper

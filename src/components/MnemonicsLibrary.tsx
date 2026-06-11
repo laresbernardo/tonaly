@@ -1,9 +1,11 @@
-import { ALL_NOTES } from '../lib/music-theory/notes';
+import { ALL_NOTES, convertNoteToNomenclature } from '../lib/music-theory/notes';
 import { INTERVAL_MAP } from '../lib/music-theory/intervals';
 import MnemonicEditor from './MnemonicEditor';
 import { BookOpen } from 'lucide-react';
+import { useTheoryStore } from '../store/useTheoryStore';
 
 export default function MnemonicsLibrary() {
+  const { noteNomenclature } = useTheoryStore();
   // Only show notes that are in the common playable range (e.g. octave 4 and 5)
   // to avoid cluttering the dictionary with too many extreme notes.
   const commonNotes = ALL_NOTES.filter(note => /[4-5]/.test(note) && !note.includes('0') && !note.includes('1') && !note.includes('7') && !note.includes('8'));
@@ -42,7 +44,7 @@ export default function MnemonicsLibrary() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {commonNotes.map(note => (
               <div key={note} className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800">
-                <div className="font-bold text-cyan-300 text-sm mb-2">{note}</div>
+                <div className="font-bold text-cyan-300 text-sm mb-2">{convertNoteToNomenclature(note, noteNomenclature)}</div>
                 <MnemonicEditor itemName={note} defaultOpen={true} />
               </div>
             ))}

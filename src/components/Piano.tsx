@@ -1,6 +1,7 @@
 import React from 'react';
-import { ALL_NOTES } from '../lib/music-theory/notes';
+import { ALL_NOTES, convertNoteToNomenclature } from '../lib/music-theory/notes';
 import { pianoSynth } from '../lib/music-theory/piano-synth';
+import { useTheoryStore } from '../store/useTheoryStore';
 
 interface PianoProps {
   activeNotes?: string[];       // Notes currently highlighted (e.g., currently sounding)
@@ -20,6 +21,7 @@ export const Piano: React.FC<PianoProps> = ({
   incorrectNote = null,
   customRange
 }) => {
+  const { noteNomenclature } = useTheoryStore();
   // Display notes from C4 to C5 for a standard visual center or use customRange
   const pianoRange = customRange || ALL_NOTES.filter(note => /[4-5]/.test(note)).slice(3, 16); // C4 to C5 inclusive
 
@@ -71,7 +73,7 @@ export const Piano: React.FC<PianoProps> = ({
                 className={`flex-1 border-r transition duration-100 flex items-end justify-center pb-4 font-mono text-[10px] sm:text-xs font-bold uppercase focus:outline-none piano-key-shadow ${bgClass} ${textClass}`}
                 style={{ zIndex: 1 }}
               >
-                <span>{note.replace(/[0-9]/g, '')}</span>
+                <span>{convertNoteToNomenclature(note, noteNomenclature).replace(/[0-9]/g, '')}</span>
               </button>
             );
           })}

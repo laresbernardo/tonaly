@@ -11,9 +11,10 @@ import {
   Line,
   CartesianGrid
 } from 'recharts';
-import type { HistoryItem } from '../store/useTheoryStore';
+import { useTheoryStore, type HistoryItem } from '../store/useTheoryStore';
 import { Award, CheckCircle2, Percent, BarChart3, Flame, Target, Clock, Timer } from 'lucide-react';
 import { INTERVAL_MAP } from '../lib/music-theory/intervals';
+import { ALL_NOTES, convertNoteToNomenclature } from '../lib/music-theory/notes';
 
 interface AnalyticsDashboardProps {
   history: HistoryItem[];
@@ -36,6 +37,7 @@ const formatTotalTime = (ms: number) => {
 };
 
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history }) => {
+  const { noteNomenclature } = useTheoryStore();
   const [directionFilter, setDirectionFilter] = useState<'all' | 'low-to-high' | 'high-to-low'>('all');
   const [timeRangeFilter, setTimeRangeFilter] = useState<'1D' | '1M' | '1Y' | 'ALL TIME'>('1Y');
   const [itemChartMetric, setItemChartMetric] = useState<'successRate' | 'avgResponseTimeSec'>('successRate');
@@ -114,14 +116,24 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
         ? parseFloat((stats.totalResponseTimeMs / stats.responseTimeCount / 1000).toFixed(2))
         : 0;
 
+      const displayName = ALL_NOTES.includes(name)
+        ? convertNoteToNomenclature(name, noteNomenclature)
+        : name;
+
       return {
-        name: `${name} (${stats.total})`,
+        name: `${displayName} (${stats.total})`,
         originalName: name,
         successRate: Math.round((stats.correct / stats.total) * 100),
         avgResponseTimeSec,
         totalAttempts: stats.total
       };
     }).sort((a, b) => {
+      const noteAIndex = ALL_NOTES.indexOf(a.originalName);
+      const noteBIndex = ALL_NOTES.indexOf(b.originalName);
+      if (noteAIndex !== -1 && noteBIndex !== -1) {
+        return noteAIndex - noteBIndex;
+      }
+
       const intervalA = INTERVAL_MAP.find(i => i.name === a.originalName);
       const intervalB = INTERVAL_MAP.find(i => i.name === b.originalName);
       
@@ -131,6 +143,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
       
       if (intervalA) return -1;
       if (intervalB) return 1;
+      if (noteAIndex !== -1) return -1;
+      if (noteBIndex !== -1) return 1;
       
       return a.originalName.localeCompare(b.originalName);
     });
@@ -204,7 +218,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
       totalResponseTimeMs,
       avgResponseTimeMs
     };
-  }, [filteredHistory]);
+  }, [filteredHistory, noteNomenclature]);
 
   if (history.length === 0) {
     return (
@@ -321,9 +335,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ history 
           <div className="mt-2 min-w-0">
             <h4 
               className="text-base sm:text-lg font-black text-white leading-none truncate" 
-              title={`${metrics.topWeakness.name} (${metrics.topWeakness.rate}% success)`}
+              title={`${ALL_NOTES.includes(metrics.topWeakness.name) ? convertNoteToNomenclature(metrics.topWeakness.name, noteNomenclature) : metrics.topWeakness.name} (${metrics.topWeakness.rate}% success)`}
             >
-              {metrics.topWeakness.name}
+              {ALL_NOTES.includes(metrics.topWeakness.name) ? convertNoteToNomenclature(metrics.topWeakness.name, noteNomenclature) : metrics.topWeakness.name}
             </h4>
           </div>
         </div>

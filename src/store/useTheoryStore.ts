@@ -31,6 +31,7 @@ interface TheoryStore {
   customIntervals: string[];
   logResults: boolean;
   intervalDirection: 'low-to-high' | 'high-to-low';
+  noteNomenclature: 'scientific' | 'solfege';
   testActive: boolean;
   currentTest: {
     baseNote: string;
@@ -55,9 +56,11 @@ interface TheoryStore {
   setCustomIntervals: (intervals: string[]) => void;
   setLogResults: (log: boolean) => void;
   setIntervalDirection: (direction: 'low-to-high' | 'high-to-low') => void;
+  setNoteNomenclature: (nomenclature: 'scientific' | 'solfege') => void;
   generateNewTest: () => void;
   rehearTest: () => void;
   submitGuess: (guess: string) => Promise<void>;
+  playOptionSound: (option: string) => void;
   loadHistory: (userId: string | null) => Promise<void>;
   clearHistory: () => Promise<void>;
   deleteHistoryItem: (itemId: string) => Promise<void>;
@@ -79,6 +82,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   customIntervals: ['Unison', 'Major 3rd', 'Perfect 5th', 'Octave'],
   logResults: true,
   intervalDirection: 'low-to-high',
+  noteNomenclature: 'scientific',
   testActive: false,
   currentTest: null,
   userGuess: null,
@@ -117,6 +121,11 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
 
   setIntervalDirection: (intervalDirection) => {
     set({ intervalDirection });
+    get().saveSettings();
+  },
+
+  setNoteNomenclature: (noteNomenclature) => {
+    set({ noteNomenclature });
     get().saveSettings();
   },
 
@@ -215,6 +224,28 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
     }
   },
 
+  playOptionSound: (option: string) => {
+    const { gameMode, currentTest, intervalDirection } = get();
+    if (!currentTest) return;
+
+    if (gameMode === 'Note Identification') {
+      pianoSynth.playNote(option, 2.5);
+    } else {
+      const baseNote = currentTest.baseNote;
+      const intervalDef = INTERVAL_MAP.find(item => item.name === option);
+      if (intervalDef) {
+        const semitones = intervalDef.semitones;
+        const targetNote = getNoteFromSemitones(
+          baseNote,
+          intervalDirection === 'high-to-low' ? -semitones : semitones
+        );
+        if (targetNote) {
+          pianoSynth.playInterval(baseNote, targetNote, 'melodic', 650);
+        }
+      }
+    }
+  },
+
   submitGuess: async (guess) => {
     const { currentTest, gameMode, difficulty, logResults, history, intervalDirection } = get();
     if (!currentTest || get().hasAnswered) return;
@@ -239,6 +270,9 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
       isCorrect: isCorrectAnswer,
       hasAnswered: true
     });
+
+    // Play guess sound regardless of it is correct or wrong
+    get().playOptionSound(guess);
 
     // Optionally log to History
     if (logResults) {
@@ -437,7 +471,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
   saveSettings: async () => {
     const currentUser = auth.currentUser;
     if (currentUser) {
-      const { gameMode, difficulty, customNotes, customIntervals, intervalDirection, logResults } = get();
+      const { gameMode, difficulty, customNotes, customIntervals, intervalDirection, logResults, noteNomenclature } = get();
       try {
         const { setDoc } = await import('firebase/firestore');
         await setDoc(doc(db, 'users', currentUser.uid, 'preferences', 'settings'), {
@@ -446,7 +480,8 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
           customNotes,
           customIntervals,
           intervalDirection,
-          logResults
+          logResults,
+          noteNomenclature
         }, { merge: true });
       } catch (e) {
         console.warn('Failed to save settings to Firestore:', e);
@@ -468,6 +503,7 @@ export const useTheoryStore = create<TheoryStore>((set, get) => ({
             customIntervals: data.customIntervals ?? get().customIntervals,
             intervalDirection: data.intervalDirection ?? get().intervalDirection,
             logResults: data.logResults ?? get().logResults,
+            noteNomenclature: data.noteNomenclature ?? get().noteNomenclature,
           });
         } else {
           get().saveSettings();
