@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# LLM context
+# llms.txt: https://tonaly.bervos.org/llms.txt
+
+Sitemap: https://tonaly.bervos.org/sitemap.xml
