@@ -78,3 +78,6 @@ npm run build
    npm run build
    firebase deploy --only hosting
    ```
+
+## Deploys (CI)
+Merging a PR to `main` deploys hosting to `tonaly-bervos` via `.github/workflows/deploy.yml`, using the `FIREBASE_SERVICE_ACCOUNT_TONALY_BERVOS` repo secret - no personal `firebase login` needed. Firestore rules stay manual: `firebase deploy --only firestore --project tonaly-bervos`. Fallback: `firebase deploy --only hosting`.
