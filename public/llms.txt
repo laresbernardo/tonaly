@@ -1,0 +1,12 @@
+# tonaly
+
+> Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
+
+## About
+- Immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights. Part of the BERVOS ecosystem (https://bervos.org).
+- Author: Bernardo Lares (https://bervos.org)
+
+## Links
+- [Web app](https://tonaly.bervos.org/)
+- [BERVOS ecosystem](https://bervos.org)
+- [Source code](https://github.com/laresbernardo/tonaly)
