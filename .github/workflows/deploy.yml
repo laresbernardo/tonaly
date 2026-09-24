@@ -19,7 +19,29 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies and build
-        run: npm ci && npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+        run: |
+          # Fail fast if any Firebase web config secret is missing, so a build
+          # with placeholder config can never ship again.
+          for v in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID VITE_FIREBASE_MEASUREMENT_ID; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing repo secret $v"
+              exit 1
+            fi
+          done
+          npm ci && npm run build
+          # The real API key must be in the built bundle.
+          if ! grep -rqF "$VITE_FIREBASE_API_KEY" dist/assets; then
+            echo "::error::Built bundle does not contain the Firebase API key"
+            exit 1
+          fi
 
       - name: Write deploy credentials
         env:
