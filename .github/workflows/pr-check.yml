@@ -1,0 +1,24 @@
+name: PR build check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Main currently has lint errors; report lint without blocking the build gate.
+      - name: Lint (nonblocking until baseline is clean)
+        run: npm run lint
+        continue-on-error: true
+      - run: npm run build
