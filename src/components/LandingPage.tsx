@@ -1,94 +1,95 @@
 import React, { useState } from 'react';
 import {
   LogIn,
-  ShieldAlert,
   Activity,
   Award,
   CheckCircle,
   BookmarkCheck,
-  Play
+  Play,
+  Volume2,
 } from 'lucide-react';
+import type { User } from 'firebase/auth';
 import Piano from './Piano';
-import { ALL_NOTES } from '../lib/music-theory/notes';
+import { ALL_NOTES, getNoteFrequency } from '../lib/music-theory/notes';
 import { INTERVAL_MAP } from '../lib/music-theory/intervals';
+import { pianoSynth, TIMBRE_LABELS, type SynthTimbre } from '../lib/music-theory/piano-synth';
+import { useTheoryStore } from '../store/useTheoryStore';
 
 interface LandingPageProps {
   onPlayAsGuest: () => void;
   onSignIn: () => void;
-  user: any; // Current Firebase User
+  user: User | null;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onPlayAsGuest,
   onSignIn,
-  user
+  user,
 }) => {
+  const { timbre, setTimbre } = useTheoryStore();
   const [lastClickedNote, setLastClickedNote] = useState<string | null>(null);
   const [prevClickedNote, setPrevClickedNote] = useState<string | null>(null);
 
-  // Determine wide piano note pool: F3 to C6 inclusive
   const customPianoRange = ALL_NOTES.slice(
-    ALL_NOTES.indexOf("F3"),
-    ALL_NOTES.indexOf("C6") + 1
+    ALL_NOTES.indexOf('F3'),
+    ALL_NOTES.indexOf('C6') + 1
   );
 
-  // Identify interval if both notes are set
   let identifiedInterval = '';
   let intervalSemitones = 0;
   let intervalAbbr = '';
-  
+
   if (lastClickedNote && prevClickedNote) {
     const indexPrev = ALL_NOTES.indexOf(prevClickedNote);
     const indexLast = ALL_NOTES.indexOf(lastClickedNote);
-    intervalSemitones = Math.abs(indexLast - indexPrev);
-    const match = INTERVAL_MAP.find(item => item.semitones === intervalSemitones);
-    if (match) {
-      identifiedInterval = match.name;
-      intervalAbbr = match.abbreviation;
+    if (indexPrev !== -1 && indexLast !== -1) {
+      intervalSemitones = Math.abs(indexLast - indexPrev);
+      const match = INTERVAL_MAP.find((item) => item.semitones === intervalSemitones);
+      if (match) {
+        identifiedInterval = match.name;
+        intervalAbbr = match.abbreviation;
+      }
     }
   }
 
   return (
-    <div className="space-y-12 md:space-y-16 py-4 md:py-12 max-w-6xl mx-auto animate-fadeIn">
-
+    <div className="space-y-14 md:space-y-20 py-4 md:py-10 max-w-6xl mx-auto animate-fadeIn">
       {/* Hero Section */}
-      <section className="relative flex flex-col items-center justify-center gap-8 md:gap-12 text-center">
-        {/* Glow Orbs specific to Hero */}
-        <div className="absolute -top-10 -left-10 w-72 h-72 rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-orange-500/5 blur-[140px] pointer-events-none" />
-
-        <div className="max-w-3xl space-y-4 md:space-y-6">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight leading-tight text-white animate-fadeIn">
-            Master Your Pitch. <br />
-            <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
-              Elevate Your Hearing.
-            </span>
+      <section className="relative flex flex-col items-center justify-center gap-8 md:gap-10 text-center">
+        <div className="max-w-3xl space-y-5">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-white">
+            Train Your Musical Ear. <br />
+            <span className="text-cyan-400">Feel Every Interval & Chord.</span>
           </h1>
 
-          <p className="text-slate-400 text-xs sm:text-sm md:text-base max-w-2xl mx-auto font-medium leading-relaxed px-2">
-            Tonaly is an immersive ear training studio designed for musicians and audiophiles. Develop absolute note recognition, master relative intervals, and unlock deep performance insights.
+          <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-normal leading-relaxed px-2">
+            An interactive ear-training studio built for musicians, producers, and curious listeners. Master notes, melodic & harmonic intervals, and chord qualities with tactile instruments, live streaks, and adaptive practice.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 sm:pt-4 px-4 sm:px-0 w-full max-w-md mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 px-4 sm:px-0 w-full max-w-md mx-auto">
             {user ? (
               <button
+                type="button"
                 onClick={onPlayAsGuest}
-                className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-xs sm:text-sm transition shadow-xl shadow-cyan-600/25 hover:-translate-y-0.5 duration-200 tracking-wider uppercase"
+                className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-cyan-600 hover:bg-cyan-500 text-white px-8 py-3.5 rounded-2xl font-extrabold text-xs sm:text-sm transition shadow-xl shadow-cyan-950/50 hover:-translate-y-0.5 duration-200 tracking-wider uppercase cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-white" />
-                <span>Enter Arena</span>
+                <span>Enter Studio Arena</span>
               </button>
             ) : (
               <>
                 <button
+                  type="button"
                   onClick={onPlayAsGuest}
-                  className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-xs sm:text-sm transition hover:-translate-y-0.5 duration-200 tracking-wider uppercase"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-500 text-white px-7 py-3.5 rounded-2xl font-extrabold text-xs sm:text-sm transition shadow-xl shadow-cyan-950/50 hover:-translate-y-0.5 duration-200 tracking-wider uppercase cursor-pointer"
                 >
-                  <span>Play as Guest</span>
+                  <Play className="h-4 w-4 fill-white" />
+                  <span>Start Playing</span>
                 </button>
                 <button
+                  type="button"
                   onClick={onSignIn}
-                  className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-xs sm:text-sm transition shadow-xl shadow-cyan-600/25 hover:-translate-y-0.5 duration-200 tracking-wider uppercase"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-7 py-3.5 rounded-2xl font-extrabold text-xs sm:text-sm transition hover:-translate-y-0.5 duration-200 tracking-wider uppercase cursor-pointer"
                 >
                   <LogIn className="h-4 w-4" />
                   <span>Sign In</span>
@@ -98,98 +99,136 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
 
-        {/* Wide Piano Embed Showcase */}
-        <div className="w-full max-w-4xl glass-panel p-4 sm:p-6 rounded-3xl border border-slate-800/60 shadow-3xl relative group hover:border-cyan-500/20 transition duration-300">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-3xl opacity-5 blur-[10px] group-hover:opacity-10 transition duration-300 pointer-events-none" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4">
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-              <span className="text-xs font-bold text-slate-300 tracking-wider uppercase">Live Studio Console</span>
+        {/* Live Studio Console Showcase */}
+        <div className="w-full max-w-4xl glass-panel p-4 sm:p-6 rounded-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center space-x-2.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span className="text-xs font-bold text-slate-200 tracking-wider uppercase">
+                Interactive Studio Console
+              </span>
             </div>
-            
-            <div className="flex items-center justify-between sm:justify-end space-x-3 select-none">
-              <button 
-                onClick={() => {
-                  setLastClickedNote(null);
-                  setPrevClickedNote(null);
-                }}
-                className="text-[10px] text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-900 px-2.5 py-1 rounded border border-slate-800/80 transition"
-              >
-                Reset Console
-              </button>
-              <span className="hidden sm:inline-block text-[10px] text-cyan-400 font-mono bg-cyan-950/40 border border-cyan-800/40 px-2 py-0.5 rounded-md">Interval & Pitch Identifier</span>
+
+            <div className="flex flex-wrap items-center gap-2 select-none">
+              <div className="flex bg-slate-950/90 p-0.5 rounded-lg border border-slate-800/80">
+                {(Object.keys(TIMBRE_LABELS) as SynthTimbre[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTimbre(t)}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                      timbre === t ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {TIMBRE_LABELS[t].split(' ')[1] || TIMBRE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+              {lastClickedNote && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLastClickedNote(null);
+                    setPrevClickedNote(null);
+                  }}
+                  className="text-[10px] text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800/80 transition cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Piano component rendered with wide range F3-C6 and click listener */}
-          <Piano 
-            interactive={true} 
+          <Piano
+            interactive={true}
+            enableMidi={true}
             customRange={customPianoRange}
+            rootNote={prevClickedNote}
+            correctNote={lastClickedNote}
+            arcInterval={
+              prevClickedNote && lastClickedNote
+                ? { from: prevClickedNote, to: lastClickedNote, label: intervalAbbr }
+                : null
+            }
             onKeyClick={(note) => {
               if (prevClickedNote && lastClickedNote) {
-                // Cycle Reset: third click clears prev note and sets current note as the new first note
                 setPrevClickedNote(null);
                 setLastClickedNote(note);
               } else if (lastClickedNote) {
-                // Second click: set first note as prev and current note as last
                 setPrevClickedNote(lastClickedNote);
                 setLastClickedNote(note);
               } else {
-                // First click: set last note
                 setLastClickedNote(note);
               }
             }}
-            activeNotes={lastClickedNote ? (prevClickedNote ? [prevClickedNote, lastClickedNote] : [lastClickedNote]) : []}
           />
 
           {/* Interactive Identifier Display Block */}
-          <div className="mt-6 bg-slate-950/80 border border-slate-900 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left animate-fadeIn">
+          <div className="mt-4 studio-inset rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
             {!lastClickedNote ? (
-              <div className="flex items-center space-x-3 py-2 text-slate-400 text-xs font-medium mx-auto md:mx-0">
-                <span className="shrink-0">🎹</span>
-                <span>Strike keys on the virtual console above to identify note names, frequency pitches, and sequential intervals!</span>
-              </div>
+              <p className="text-slate-400 text-xs font-medium mx-auto md:mx-0">
+                Tap any two keys above (or play a connected MIDI keyboard) to hear studio timbres and inspect exact intervals.
+              </p>
             ) : (
               <>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 w-full md:w-auto">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 w-full md:w-auto">
                   {prevClickedNote && (
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">First Note</span>
-                      <div className="text-base sm:text-lg font-extrabold text-slate-300 bg-slate-900/80 border border-slate-800 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        First Pitch
+                      </span>
+                      <div className="text-base font-extrabold text-cyan-300 bg-cyan-950/30 border border-cyan-800/40 px-3.5 py-1.5 rounded-xl font-mono">
                         {prevClickedNote}
                       </div>
                     </div>
                   )}
-                  
-                  {prevClickedNote && (
-                    <div className="text-cyan-500 font-bold text-lg animate-pulse">➔</div>
-                  )}
+
+                  {prevClickedNote && <div className="text-slate-500 font-bold text-base">→</div>}
 
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      {prevClickedNote ? "Second Note (Latest)" : "Note Played"}
+                      {prevClickedNote ? 'Second Pitch' : 'Pitch Played'}
                     </span>
-                    <div className="text-base sm:text-lg font-extrabold text-cyan-400 bg-cyan-950/20 border border-cyan-900/40 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl">
-                      {lastClickedNote}
+                    <div className="text-base font-extrabold text-emerald-300 bg-emerald-950/30 border border-emerald-800/40 px-3.5 py-1.5 rounded-xl font-mono">
+                      {lastClickedNote}{' '}
+                      <span className="text-[11px] font-normal text-slate-400">
+                        ({getNoteFrequency(lastClickedNote).toFixed(1)} Hz)
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {identifiedInterval ? (
-                  <div className="bg-gradient-to-r from-cyan-950/25 to-purple-950/10 border border-cyan-900/40 rounded-2xl p-4 max-w-md md:shrink-0 text-center md:text-left animate-fadeIn">
-                    <div className="flex items-center justify-center md:justify-start space-x-2 mb-1">
-                      <span className="text-xs font-black text-cyan-300 tracking-wide uppercase">{identifiedInterval}</span>
-                      <span className="text-[9px] font-mono bg-purple-950/60 border border-purple-800/40 text-purple-300 px-1.5 py-0.5 rounded">
-                        {intervalAbbr}
-                      </span>
+                  <div className="flex items-center gap-3 bg-slate-900/70 border border-slate-800 rounded-2xl px-4 py-3 text-left">
+                    <div>
+                      <div className="flex items-center space-x-2 mb-0.5">
+                        <span className="text-xs font-black text-white uppercase tracking-wide">
+                          {identifiedInterval}
+                        </span>
+                        <span className="text-[10px] font-mono bg-cyan-950/60 border border-cyan-800/40 text-cyan-300 px-1.5 py-0.5 rounded">
+                          {intervalAbbr} • {intervalSemitones} st
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Replay together or melodically to lock in the color.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      The pitch distance between <strong className="text-slate-300">{prevClickedNote}</strong> and <strong className="text-slate-300">{lastClickedNote}</strong> measures exactly <strong className="text-cyan-400">{intervalSemitones} semitones</strong>.
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        prevClickedNote &&
+                        lastClickedNote &&
+                        pianoSynth.playInterval(prevClickedNote, lastClickedNote, 'harmonic')
+                      }
+                      title="Play harmonic interval"
+                      className="p-2.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 transition cursor-pointer shrink-0"
+                    >
+                      <Volume2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ) : (
-                  <div className="text-slate-400 text-xs py-2 max-w-sm mx-auto md:mx-0 text-center md:text-left">
-                    👉 <strong>Click a second key</strong> on the console above to calculate and view the exact musical interval between them!
+                  <div className="text-slate-400 text-xs py-1 max-w-xs text-center md:text-right">
+                    Strike a <strong>second key</strong> to measure the exact musical interval between them.
                   </div>
                 )}
               </>
@@ -198,155 +237,107 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl md:text-3xl font-black text-white">Robust Training Modalities</h2>
-          <p className="text-slate-400 text-xs md:text-sm max-w-md mx-auto">
-            Unlock key cognitive milestones designed to strengthen your absolute and relative musical pitch perception.
+      {/* Capabilities Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-3xl space-y-3">
+          <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">01 / Modalities</span>
+          <h3 className="text-base font-bold text-white">Notes, Intervals & Chords</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Train single-note pitch recognition, melodic & harmonic intervals, and 10 chord qualities over optional root drones in four studio timbres.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Feature 1 */}
-          <div className="glass-panel p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800/60 flex flex-col space-y-4 hover:border-cyan-500/30 transition duration-300 group">
-            <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold text-lg">
-              I
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-cyan-400 transition">Absolute Pitch Arena</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Develop absolute ear recognition. Train to identify single pitches (C4, F#5, Bb3) without reference notes. Customize your active note pools.
-            </p>
-          </div>
+        <div className="glass-panel p-6 rounded-3xl space-y-3">
+          <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">02 / Arcade & Flow</span>
+          <h3 className="text-base font-bold text-white">Zen, 60s Blitz & Survival</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Practice at your own pace with A/B mistake comparisons and visual keyboard arcs, or test your reflexes in 60-second Blitz and Sudden-Death Survival.
+          </p>
+        </div>
 
-          {/* Feature 2 */}
-          <div className="glass-panel p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800/60 flex flex-col space-y-4 hover:border-cyan-500/30 transition duration-300 group">
-            <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-lg">
-              II
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-purple-400 transition">Interval Arena</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Master relative pitch recognition. Listen to sequential notes and identify intervals from minor seconds up to major double octaves.
-            </p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="glass-panel p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800/60 flex flex-col space-y-4 hover:border-cyan-500/30 transition duration-300 group">
-            <div className="h-10 w-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-lg">
-              III
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-orange-400 transition">Performance Insights</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Unlock detailed heatmaps, overall response times, and error statistics. Pinpoint specific notes or intervals that slow down your workflow.
-            </p>
-          </div>
+        <div className="glass-panel p-6 rounded-3xl space-y-3">
+          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">03 / Adaptive Ear</span>
+          <h3 className="text-base font-bold text-white">Smart Weakness Targeting</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Response speeds and accuracy trends automatically spotlight tricky intervals and chords so Adaptive Mode can drill what matters most.
+          </p>
         </div>
       </section>
 
-      {/* Session Persistence & Gating comparison (The core requirement) */}
-      <section className="glass-panel rounded-3xl border border-slate-800/60 p-5 sm:p-8 md:p-10 overflow-hidden relative">
-        <div className="absolute -right-10 -top-10 w-80 h-80 rounded-full bg-cyan-500/5 blur-[100px] pointer-events-none" />
-        <div className="absolute -left-10 -bottom-10 w-80 h-80 rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
-
-        <div className="max-w-2xl space-y-3 mb-6 sm:mb-10">
-          <h2 className="text-2xl md:text-3xl font-black text-white">Data Persistence Architecture</h2>
+      {/* Local + Cloud Persistence Comparison */}
+      <section className="glass-panel rounded-3xl p-6 sm:p-8 md:p-10">
+        <div className="max-w-2xl space-y-2 mb-8">
+          <h2 className="text-2xl font-black text-white">Instant Play, Seamless Sync</h2>
           <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
-            We believe in instant exploration. Test drive the app instantly as a guest, or connect your account to preserve your lifelong analytical gains. Here is how data behaves on both paths:
+            Jump straight into the studio with automatic local browser saves, or connect Google to sync your streaks, custom mnemonics, and analytics across every device.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* Path 1: Guest Sandbox */}
-          <div className="bg-slate-950/70 border border-slate-900 p-5 sm:p-8 rounded-2xl flex flex-col justify-between space-y-6 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="studio-inset p-6 rounded-2xl flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="inline-flex items-center space-x-1.5 text-orange-400 bg-orange-500/10 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-orange-500/20">
-                  <ShieldAlert className="h-3.5 w-3.5" />
-                  <span>Guest Session</span>
-                </div>
-                <span className="text-[11px] text-slate-500 font-mono">In-Memory Sandbox</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 bg-slate-800/80 px-3 py-1 rounded-full">
+                  Local Studio
+                </span>
+                <span className="text-[11px] text-slate-500 font-mono">Saved in Browser</span>
               </div>
-
-              <h3 className="text-lg font-bold text-white">Free Anonymous Sandbox</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Instantly play note tests, practice ears, aggregate charts, and view session history tables with zero signup forms.
-              </p>
-
-              <div className="space-y-2.5 pt-2">
+              <h3 className="text-lg font-bold text-white">Instant Guest Access</h3>
+              <div className="space-y-2.5 pt-1">
                 <div className="flex items-start space-x-2 text-slate-300 text-xs">
                   <CheckCircle className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
-                  <span>Complete training console access</span>
+                  <span>Full access to Notes, Intervals, Chords, Blitz & Survival</span>
                 </div>
                 <div className="flex items-start space-x-2 text-slate-300 text-xs">
                   <CheckCircle className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
-                  <span>Real-time stats, insights, and logs</span>
-                </div>
-                <div className="flex items-start space-x-2 text-orange-300 bg-orange-500/5 border border-orange-500/10 p-2.5 rounded-xl text-xs">
-                  <ShieldAlert className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Notice:</strong> Refreshing the browser or leaving the tab completely purges your logs. Progress starts from scratch.
-                  </span>
+                  <span>Local browser persistence—reloading won't erase your session</span>
                 </div>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={onPlayAsGuest}
-              className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 py-3.5 rounded-xl font-bold text-xs transition duration-200 tracking-wider uppercase"
+              className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 py-3 rounded-xl font-bold text-xs transition uppercase tracking-wider cursor-pointer"
             >
-              Play as Guest
+              Launch Local Studio
             </button>
           </div>
 
-          {/* Path 2: Signed-In */}
-          <div className="bg-slate-950/70 border border-cyan-500/20 p-5 sm:p-8 rounded-2xl flex flex-col justify-between space-y-6 shadow-xl shadow-cyan-950/10">
+          <div className="studio-inset p-6 rounded-2xl border-cyan-500/20 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="inline-flex items-center space-x-1.5 text-cyan-300 bg-cyan-500/10 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-cyan-500/20">
+                <span className="inline-flex items-center space-x-1.5 text-cyan-300 bg-cyan-500/10 px-3 py-1 rounded-full text-[10px] font-bold uppercase">
                   <Activity className="h-3.5 w-3.5" />
-                  <span>Persistent Cloud Storage</span>
-                </div>
-                <span className="text-[11px] text-cyan-400 font-mono">Sync Active</span>
+                  <span>Cloud Account</span>
+                </span>
+                <span className="text-[11px] text-cyan-400 font-mono">Cross-Device Sync</span>
               </div>
-
-              <h3 className="text-lg font-bold text-white">Cloud Synced Account</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Log in securely with your Google Account to back up all training records to our Firestore cloud database.
-              </p>
-
-              <div className="space-y-2.5 pt-2">
+              <h3 className="text-lg font-bold text-white">Lifelong Cloud Backup</h3>
+              <div className="space-y-2.5 pt-1">
                 <div className="flex items-start space-x-2 text-slate-300 text-xs">
                   <BookmarkCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Lifelong preservation of accuracy trends</span>
+                  <span>Automatic migration of any guest practice history on sign-in</span>
                 </div>
                 <div className="flex items-start space-x-2 text-slate-300 text-xs">
-                  <BookmarkCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Cross-device sync (desktop, mobile, tablet)</span>
-                </div>
-                <div className="flex items-start space-x-2 text-slate-300 text-xs">
-                  <BookmarkCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Build historic training benchmarks and heatmaps</span>
-                </div>
-                <div className="flex items-start space-x-2 text-emerald-300 bg-emerald-500/5 border border-emerald-500/10 p-2.5 rounded-xl text-xs">
                   <Award className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Reliable Sync:</strong> Close tabs and refresh at will. Your analytics dashboard will safely persist.
-                  </span>
+                  <span>Sync custom mnemonics, high scores, and analytics everywhere</span>
                 </div>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={onSignIn}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3.5 rounded-xl font-extrabold text-xs transition shadow-lg shadow-cyan-600/20 duration-200 tracking-wider uppercase"
+              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-lg shadow-cyan-950/40 uppercase tracking-wider cursor-pointer"
             >
-              Sign In
+              Sign In with Google
             </button>
           </div>
         </div>
       </section>
-
     </div>
   );
 };
+
 export default LandingPage;

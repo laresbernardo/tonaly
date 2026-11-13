@@ -1,4 +1,4 @@
-// Standard 88-key piano notes array from A0 to C8
+// Standard 88-key piano notes array from A0 (MIDI 21) to C8 (MIDI 108)
 export const ALL_NOTES = [
   "A0", "Bb0", "B0",
   "C1", "C#1", "D1", "Eb1", "E1", "F1", "F#1", "G1", "G#1", "A1", "Bb1", "B1",
@@ -11,30 +11,55 @@ export const ALL_NOTES = [
   "C8"
 ];
 
+// Canonical enharmonic mapping matching ALL_NOTES (C#, Eb, F#, G#, Bb)
+const ENHARMONIC_TO_CANONICAL: Record<string, string> = {
+  Db: "C#",
+  "D#": "Eb",
+  Gb: "F#",
+  Ab: "G#",
+  "A#": "Bb",
+};
+
+/**
+ * Normalizes any enharmonic note name (e.g. "D#4" -> "Eb4", "Db4" -> "C#4")
+ * so it matches ALL_NOTES canonically across Piano, Synth, and Store.
+ */
+export const normalizeNoteName = (note: string): string => {
+  if (!note) return note;
+  const match = note.trim().match(/^([A-G](?:#|b)?)([0-8]?)$/);
+  if (!match) return note;
+  const [, pitchClass, octave] = match;
+  const canonicalPitch = ENHARMONIC_TO_CANONICAL[pitchClass] || pitchClass;
+  return `${canonicalPitch}${octave}`;
+};
+
 // Solfege syllable mapping for classical training support
 export const SOLFEGE_MAP: Record<string, string> = {
-  "C": "Do",
-  "D": "Re",
-  "E": "Mi",
-  "F": "Fa",
-  "G": "Sol",
-  "A": "La",
-  "B": "Si"
+  C: "Do",
+  D: "Re",
+  E: "Mi",
+  F: "Fa",
+  G: "Sol",
+  A: "La",
+  B: "Si"
 };
 
 // Formatting function for note display
 export const formatNoteName = (noteName: string): string => {
-  const baseNote = noteName.replace(/[0-9#b]/g, ''); // extract letter
+  const normalized = normalizeNoteName(noteName);
+  const baseNote = normalized.replace(/[0-9#b]/g, '');
   const solfege = SOLFEGE_MAP[baseNote];
-  return solfege ? `${noteName} (${solfege})` : noteName;
+  return solfege ? `${normalized} (${solfege})` : normalized;
 };
 
-// Converts note names (like C#4) to selected nomenclature (like Do#4)
+// Converts note names (like C#4 or Eb4) to selected nomenclature (like Do#4 or Mib4)
 export const convertNoteToNomenclature = (noteName: string, nomenclature: 'scientific' | 'solfege'): string => {
-  if (nomenclature === 'scientific' || !noteName) return noteName;
+  if (!noteName) return noteName;
+  const normalized = normalizeNoteName(noteName);
+  if (nomenclature === 'scientific') return normalized;
 
-  const match = noteName.match(/^([A-G])([#b]?)([0-9]?)$/);
-  if (!match) return noteName;
+  const match = normalized.match(/^([A-G])([#b]?)([0-9]?)$/);
+  if (!match) return normalized;
   const [, letter, accidental, octave] = match;
 
   const solfegeLetter = SOLFEGE_MAP[letter] || letter;
@@ -47,29 +72,24 @@ export const getNotesByOctaves = (octaves: number[]): string[] => {
   return ALL_NOTES.filter(note => regex.test(note));
 };
 
-// Standard note frequencies map for standard C4 = 261.63Hz reference
+// Convert MIDI number (21..108) to canonical ALL_NOTES string
+export const midiToNoteName = (midi: number): string | null => {
+  const idx = midi - 21;
+  if (idx < 0 || idx >= ALL_NOTES.length) return null;
+  return ALL_NOTES[idx];
+};
+
+// Convert note string to MIDI number (21..108)
+export const noteToMidi = (note: string): number | null => {
+  const normalized = normalizeNoteName(note);
+  const idx = ALL_NOTES.indexOf(normalized);
+  if (idx === -1) return null;
+  return idx + 21;
+};
+
+// Standard note frequencies map for standard A4 = 440Hz (C4 = 261.63Hz)
 export const getNoteFrequency = (note: string): number => {
-  const notesMap = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  
-  // Normalize flat notes to sharp notes for mapping
-  let normalizedNote = note;
-  if (note.startsWith("Bb")) normalizedNote = "A#" + note.slice(2);
-  else if (note.startsWith("Eb")) normalizedNote = "D#" + note.slice(2);
-  else if (note.startsWith("Ab")) normalizedNote = "G#" + note.slice(2);
-  else if (note.startsWith("Db")) normalizedNote = "C#" + note.slice(2);
-  else if (note.startsWith("Gb")) normalizedNote = "F#" + note.slice(2);
-
-  const keyPattern = /^([A-G]#?)([0-8])$/;
-  const match = normalizedNote.match(keyPattern);
-  if (!match) return 440; // Fallback to A4 standard pitch
-
-  const noteName = match[1];
-  const octave = parseInt(match[2], 10);
-  
-  const semitoneOffset = notesMap.indexOf(noteName);
-  // C4 index key is 40 in MIDI standard
-  const midiNumber = 12 * (octave + 1) + semitoneOffset;
-  
-  // Frequency based on A4 = 440Hz (MIDI index 69)
-  return 440 * Math.pow(2, (midiNumber - 69) / 12);
+  const midi = noteToMidi(note);
+  if (midi === null) return 440;
+  return 440 * Math.pow(2, (midi - 69) / 12);
 };

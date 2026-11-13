@@ -1,4 +1,4 @@
-import { ALL_NOTES } from './notes';
+import { ALL_NOTES, normalizeNoteName } from './notes';
 
 export interface Interval {
   semitones: number;
@@ -37,7 +37,8 @@ export const INTERVAL_MAP: Interval[] = [
 
 // Find the target note name given a start note and a semitone offset
 export const getNoteFromSemitones = (startNote: string, semitones: number): string | null => {
-  const startIndex = ALL_NOTES.indexOf(startNote);
+  const normalized = normalizeNoteName(startNote);
+  const startIndex = ALL_NOTES.indexOf(normalized);
   if (startIndex === -1) return null;
   
   const targetIndex = startIndex + semitones;

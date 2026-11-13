@@ -1,9 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
+  initializeAuth,
+  inMemoryPersistence,
   GoogleAuthProvider, 
   signInWithPopup, 
-  signOut 
+  signOut,
+  type Auth,
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -21,11 +24,36 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-12345678'
 };
 
+function canUseBrowserStorage(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const testKey = '__tonaly_storage_probe__';
+    window.localStorage.setItem(testKey, '1');
+    window.localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const hasBrowserStorage = canUseBrowserStorage();
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Services
-export const auth = getAuth(app);
+// Initialize Services (falls back to in-memory auth persistence in sandboxed iframes)
+function createSafeAuth(): Auth {
+  if (!hasBrowserStorage) {
+    return initializeAuth(app, { persistence: inMemoryPersistence });
+  }
+  try {
+    return getAuth(app);
+  } catch {
+    return initializeAuth(app, { persistence: inMemoryPersistence });
+  }
+}
+
+export const auth = createSafeAuth();
 export const db = getFirestore(app);
 
 // Configure Google Auth Provider
@@ -34,17 +62,19 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-// Enable Multi-Tab Offline Persistence for Firestore (Built-in offline support)
-if (typeof window !== 'undefined') {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled in one tab at a time.
-      console.warn('Firestore persistence failed: Multiple tabs open.');
-    } else if (err.code === 'unimplemented') {
-      // The current browser does not support all of the features required to enable persistence
-      console.warn('Firestore persistence is not supported by this browser.');
-    }
-  });
+// Enable Multi-Tab Offline Persistence for Firestore when browser storage is available
+if (hasBrowserStorage) {
+  try {
+    enableMultiTabIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('Firestore persistence failed: Multiple tabs open.');
+      } else if (err.code === 'unimplemented') {
+        console.warn('Firestore persistence is not supported by this browser.');
+      }
+    });
+  } catch {
+    // Ignore IndexedDB security restrictions in sandboxed contexts
+  }
 }
 
 // Helper functions for authentication

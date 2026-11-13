@@ -26,6 +26,18 @@ export const DEFAULT_REFERENCES: Record<string, string[]> = {
   "Major 14th": ["Major 7th + Octave"],
   "Double Octave": ["Two Octaves up"],
 
+  // Chords
+  "Major": ["Bright, happy & resolved", "Let It Be (opening chord)", "Open, sunny triad"],
+  "Minor": ["Warm, introspective & melancholic", "Losing My Religion (main chord)", "House of the Rising Sun"],
+  "Diminished": ["Tight silent-film suspense", "Two stacked minor 3rds", "Pulls inward urgently"],
+  "Augmented": ["Floating dreamlike mystery", "Oh! Darling (Beatles intro chord)", "Two stacked major 3rds"],
+  "Sus2": ["Open, airy & modern", "Purple Rain (intro shimmer)", "Neither major nor minor (2nd replaces 3rd)"],
+  "Sus4": ["Anthemic church/rock tension", "Pinball Wizard", "Wants to resolve down to Major 3rd"],
+  "Maj7": ["Lush, dreamy jazz/lofi warmth", "Gymnopédie No. 1 (Satie)", "Under the Bridge (verse end)"],
+  "Min7": ["Smooth, soulful & mellow", "So What (Miles Davis)", "Neo-soul / Rhodes chill chord"],
+  "Dom7": ["Bluesy tension pulling home", "Twist and Shout (climax)", "Classic 12-bar blues turnaround"],
+  "Half-Dim 7th": ["Film-noir bittersweet tension", "Tristan Chord cousin", "Autumn Leaves (iiø7 chord)"],
+
   // Notes (Common Octaves 3, 4, 5)
   "C3": ["Bass C"],
   "C#3": ["C#3 / Db3"],
@@ -83,18 +95,15 @@ export const DEFAULT_REFERENCES: Record<string, string[]> = {
 };
 
 export const getMnemonicWithDefault = (item: string, mnemonics: Record<string, string[]>): string[] => {
-  // If user has defined references, use them
   if (mnemonics && mnemonics[item] !== undefined) {
     return mnemonics[item];
   }
   
-  // Otherwise return defaults
   if (DEFAULT_REFERENCES[item]) {
     return DEFAULT_REFERENCES[item];
   }
 
-  // Fallback dynamic generation for notes
-  const noteMatch = item.match(/^([A-G]#?|b?)([0-8])$/);
+  const noteMatch = item.match(/^([A-G](?:#|b)?)([0-8])$/);
   if (noteMatch) {
     return [`Pitch of ${item}`];
   }

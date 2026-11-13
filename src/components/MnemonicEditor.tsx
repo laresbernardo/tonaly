@@ -43,6 +43,7 @@ export default function MnemonicEditor({ itemName, center = false, defaultOpen =
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
     if (e.key === 'Enter') handleAdd();
     if (e.key === 'Escape') setIsAdding(false);
   };
@@ -51,11 +52,12 @@ export default function MnemonicEditor({ itemName, center = false, defaultOpen =
     return (
       <div className={`flex justify-center ${center ? '' : 'sm:justify-start'} animate-fadeIn`}>
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
-          className="inline-flex items-center space-x-1.5 text-xs text-purple-400 hover:text-purple-300 transition px-3.5 py-1.5 rounded-xl bg-purple-950/15 border border-purple-500/20 hover:bg-purple-950/25 cursor-pointer"
+          className="inline-flex items-center space-x-1.5 text-xs text-amber-300/90 hover:text-amber-200 transition px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15 cursor-pointer"
         >
-          <Lightbulb className="h-3.5 w-3.5" />
-          <span>Show Mnemonics {activeReferences.length > 0 ? `(${activeReferences.length})` : ''}</span>
+          <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
+          <span>Memory Anchors {activeReferences.length > 0 ? `(${activeReferences.length})` : ''}</span>
         </button>
       </div>
     );
@@ -63,22 +65,22 @@ export default function MnemonicEditor({ itemName, center = false, defaultOpen =
 
   return (
     <div className="space-y-2 w-full max-w-md mx-auto">
-      {/* Tags List */}
       <div className={`flex flex-wrap gap-1.5 items-center justify-center ${center ? '' : 'sm:justify-start'} animate-fadeIn`}>
         {activeReferences.map((ref, idx) => (
-          <span 
-            key={idx} 
+          <span
+            key={idx}
             className={`inline-flex items-center space-x-1 text-xs px-2.5 py-1 rounded-full border transition duration-150 ${
-              isCustomized 
-                ? 'bg-purple-900/30 border-purple-500/40 text-purple-200' 
-                : 'bg-slate-900/40 border-slate-800 text-slate-300'
+              isCustomized
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-100'
+                : 'bg-slate-900/60 border-slate-800 text-slate-300'
             }`}
           >
-            <Music className="h-3 w-3 text-purple-400/80 shrink-0" />
+            <Music className="h-3 w-3 text-amber-400/80 shrink-0" />
             <span className="italic">{ref}</span>
-            <button 
+            <button
+              type="button"
               onClick={() => handleDelete(idx)}
-              className="text-purple-400/50 hover:text-rose-400 transition ml-1 cursor-pointer"
+              className="text-slate-500 hover:text-rose-400 transition ml-1 cursor-pointer"
               title="Delete reference"
             >
               <X className="h-3 w-3" />
@@ -86,20 +88,20 @@ export default function MnemonicEditor({ itemName, center = false, defaultOpen =
           </span>
         ))}
 
-        {/* Add Button if less than 5 */}
         {activeReferences.length < 5 && !isAdding && (
           <button
+            type="button"
             onClick={() => setIsAdding(true)}
-            className="inline-flex items-center space-x-1 text-[11px] text-purple-400 hover:text-purple-300 border border-dashed border-purple-500/30 hover:border-purple-500/60 rounded-full px-2.5 py-0.5 transition bg-purple-950/10 cursor-pointer"
+            className="inline-flex items-center space-x-1 text-[11px] text-amber-300 hover:text-amber-200 border border-dashed border-amber-500/30 hover:border-amber-400/60 rounded-full px-2.5 py-0.5 transition bg-amber-500/5 cursor-pointer"
           >
             <Plus className="h-3 w-3" />
             <span>Add</span>
           </button>
         )}
 
-        {/* Reset to Default Button */}
         {isCustomized && (
           <button
+            type="button"
             onClick={handleReset}
             className="inline-flex items-center space-x-1 text-[10px] text-slate-500 hover:text-cyan-400 transition cursor-pointer ml-1"
             title="Reset to default references"
@@ -109,11 +111,11 @@ export default function MnemonicEditor({ itemName, center = false, defaultOpen =
           </button>
         )}
 
-        {/* Collapse Button */}
         {!defaultOpen && (
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
-            className="inline-flex items-center space-x-1 text-[11px] text-slate-500 hover:text-slate-400 transition cursor-pointer ml-2"
+            className="inline-flex items-center space-x-1 text-[11px] text-slate-500 hover:text-slate-300 transition cursor-pointer ml-2"
             title="Hide references"
           >
             <span>Hide</span>
@@ -121,28 +123,29 @@ export default function MnemonicEditor({ itemName, center = false, defaultOpen =
         )}
       </div>
 
-      {/* Input Field when adding */}
       {isAdding && (
-        <div className="flex items-center space-x-2 bg-purple-950/20 border border-purple-500/40 rounded-xl px-3 py-1.5 animate-fadeIn">
+        <div className="flex items-center space-x-2 bg-slate-950/80 border border-amber-500/35 rounded-xl px-3 py-1.5 animate-fadeIn">
           <input
             ref={inputRef}
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder='Add song or sound (up to 5)...'
+            placeholder="Add song or memory cue (up to 5)..."
             maxLength={50}
-            className="bg-transparent border-none text-purple-100 text-xs focus:outline-none focus:ring-0 flex-1 placeholder-purple-400/40 italic"
+            className="bg-transparent border-none text-slate-100 text-xs focus:outline-none focus:ring-0 flex-1 placeholder-slate-500 italic"
           />
-          <button 
+          <button
+            type="button"
             onClick={handleAdd}
-            className="text-emerald-400 hover:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10"
+            className="text-emerald-400 hover:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 cursor-pointer"
           >
             Save
           </button>
-          <button 
+          <button
+            type="button"
             onClick={() => setIsAdding(false)}
-            className="text-slate-400 hover:text-slate-200"
+            className="text-slate-400 hover:text-slate-200 cursor-pointer"
           >
             <X className="h-3.5 w-3.5" />
           </button>
